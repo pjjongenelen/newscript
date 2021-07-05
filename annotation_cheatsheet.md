@@ -7,6 +7,7 @@ This should help with discovering and looking up the most relevant concepts duri
 | ADP       | Adpositional Phrase  | -                         | Often prepositional phrase in English - subentence that functions as an adjective or an adverb |
 | AUX       | Auxiliary Verb       | Hulpwerkwoord             | Verb that adds meaning to the clause in which it occurs |
 | -         | Eventive Noun        | -                         | Noun indicating a specific event or time, such as 'breakfast' or 'sunset' |
+| JJ        | Adjective            | Bijvoeglijk naamwoord     | See Dutch    |
 | NNP       | Proper Noun          | Eigennaam                 | Naming specific people, places, things, or ideas |
 | NP        | Noun Phrase          | Naamwoordgroep / Naamwoordelijk zinsdeel | A word or group of words containing a noun and functioning in a sentence as subject, object, or prepositional object |
 | VBD       | Verb Past Tense      | Werkwoord Verleden Tijd   | -            |
