@@ -9,5 +9,9 @@ We will use the methods as described by:
 - Nguyen et al. (2015). Generative Event Schema Induction with Entity Disambiguation
 - Weber et al. (2020). Causal Inference of Script Knowledge
 
----
 The most important python packages that are used for this are NLTK/Wordnet and Stanza (feel free to pronounce the latter in the voice of Petyr Baelish).
+
+---
+Currently the project is still very much under development, the current status is:
+- Nguyen et al. \t [UNDER CONSTRUCTION]
+- Weber et al. \t [NOT STARTED YET]
