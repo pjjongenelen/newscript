@@ -2,7 +2,7 @@
 Master Thesis Project on template extraction.  
 
 This project aims to evaluate the impact of data quality on the performance of template extraction algorithms.
-This is relevant, as the current state of the art is only evaluated on curated benchmark datasets such as the MUC, ACE and Gigaword copora.  
+This is relevant, as the current state of the art is mostly only evaluated on curated benchmark datasets such as the MUC, ACE and Gigaword copora.  
 
 ---
 We will use the methods as described by:
