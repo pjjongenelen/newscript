@@ -4,7 +4,7 @@ This should help with discovering and looking up the most relevant concepts duri
 
 | Syntax    | Description          | Dutch equivalent          | Explanation  |
 | -----     | -----                | -----                     | -----        |
-| ADP       | Adpositional Phrase  | -                         | Often prepositional phrase in English - subentence that functions as an adjective or an adverb |
+| ADP       | Adpositional Phrase  | -                         | Often prepositional phrase in English - subsentence that functions as an adjective or an adverb |
 | AUX       | Auxiliary Verb       | Hulpwerkwoord             | Verb that adds meaning to the clause in which it occurs |
 | -         | Eventive Noun        | -                         | Noun indicating a specific event or time, such as 'breakfast' or 'sunset' |
 | JJ        | Adjective            | Bijvoeglijk naamwoord     | See Dutch    |
