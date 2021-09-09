@@ -15,3 +15,6 @@ The most important python packages that are used for this are NLTK/Wordnet and S
 Currently the project is still very much under development, the current status is:
 - Nguyen et al.      [UNDER CONSTRUCTION]
 - Weber et al.       [NOT STARTED YET]
+
+template_extraction.ipynb forms the backbone of the experimentation.
+Functions based on one of the specific papers are imported there from their respective .py files. 
