@@ -9,7 +9,7 @@ import helpers
 def create_pipeline():
     # Create Stanza pipeline
     stanza.download(
-        "en", processors="tokenize,mwt,pos,lemma,depparse", logging_level="WARN"
+        lang="en", processors="tokenize,mwt,pos,lemma,depparse", logging_level="WARN"
     )
     # TODO: Zijn dit wel de goeie processoren?
     return stanza.Pipeline(
