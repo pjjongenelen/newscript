@@ -49,7 +49,7 @@ def get_entities():
     wn_evnouns = get_event_nouns()
     print(f"Identified {len(wn_evnouns)} eventive nouns.")
     entities = []
-    print('Extracting entities...')
+    print("Extracting entities...")
     for sent in doc.sentences:
         for word in sent.words:
             if word.upos == "NOUN" and (
@@ -57,7 +57,7 @@ def get_entities():
                 or sent.words[word.head - 1].text in wn_evnouns
             ):
                 closest_mod = get_closest_mod(sent, word)
-                entities = append_entities_list(entities, sent, word, closest_mod)
+                entities.append(determine_entities(sent, word, closest_mod))
     return entities
 
 
@@ -74,34 +74,23 @@ def get_closest_mod(sent, word):
     return closest_mod
 
 
-def append_entities_list(entities, sent, word, closest_mod):
-    # Append entities list based on closest modifier
+def determine_entities(sent, word, closest_mod):
+    # Determine addition to entities list based on closest modifier
+    result = [
+        word.text,
+        sent.id,
+        word.id,
+        sent.words[word.head - 1].text,
+        sent.words[word.head - 1].id,
+        word.deprel,
+    ]
     if closest_mod[2] < 100000:
-        # Attach the modifier to the list
-        entities.append(
-            [
-                word.text,
-                sent.id,
-                word.id,
-                sent.words[word.head - 1].text,
-                sent.words[word.head - 1].id,
-                word.deprel,
-                closest_mod[3],
-                closest_mod[1],
-            ]
-        )
+        # Append with modifier
+        result += [closest_mod[3], closest_mod[1]]
     else:
-        # Attach without a modifier
-        entities.append(
-            [
-                word.text,
-                sent.id,
-                word.id,
-                sent.words[word.head - 1].text,
-                sent.words[word.head - 1].id,
-                word.deprel,
-                "",
-                -1,
-            ]
-        )
-    return entities
+        # Append without modifier
+        result += [
+            "",
+            -1,
+        ]
+    return result
