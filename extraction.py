@@ -1,30 +1,27 @@
 from warnings import catch_warnings, simplefilter
 
-import stanza
-from nltk.corpus import wordnet as wn
+from nltk.corpus import wordnet
 
 import helpers
 
 
-def create_pipeline():
-    # Create Stanza pipeline
-    stanza.download(
-        lang="en", processors="tokenize,mwt,pos,lemma,depparse", logging_level="WARN"
-    )
-    # TODO: Zijn dit wel de goeie processoren?
-    return stanza.Pipeline(
-        lang="en", processors="tokenize,mwt,pos,lemma,depparse", verbose=False
+def main():
+    doc = helpers.retrieve_document()
+    print(
+        f"Retrieved Stanza document ({doc.num_words} words, {doc.num_tokens} tokens)."
     )
 
+    event_nouns = define_event_nouns()
+    print(f"Identified {len(event_nouns)} eventive nouns.")
 
-def retrieve_document() -> stanza.Document:
-    # Retrieve Stanza document
-    text = helpers.get_text()
-    pipeline = create_pipeline()
-    return pipeline(text)
+    entities = get_entities(doc, event_nouns)
+    print(f"Extracted {len(entities)} entities:")
+
+    for entity in entities:
+        print(entity)
 
 
-def get_event_nouns():
+def define_event_nouns():
     # Define a list of eventive nouns
     with catch_warnings():
         simplefilter("ignore")
@@ -32,29 +29,25 @@ def get_event_nouns():
             set(
                 [
                     w
-                    for s in wn.synset("event.n.01").closure(lambda s: s.hyponyms())
-                    or wn.synset("act.n.02").closure(lambda s: s.hyponyms())
+                    for s in wordnet.synset("event.n.01").closure(
+                        lambda s: s.hyponyms()
+                    )
+                    or wordnet.synset("act.n.02").closure(lambda s: s.hyponyms())
                     for w in s.lemma_names()
                 ]
             )
         )
 
 
-def get_entities():
+def get_entities(doc, event_nouns):
     # Extract entities from the text
-    doc = retrieve_document()
-    print(
-        f"Retrieved Stanza document ({doc.num_words} words, {doc.num_tokens} tokens)."
-    )
-    wn_evnouns = get_event_nouns()
-    print(f"Identified {len(wn_evnouns)} eventive nouns.")
     entities = []
     print("Extracting entities...")
     for sent in doc.sentences:
         for word in sent.words:
             if word.upos == "NOUN" and (
                 sent.words[word.head - 1].upos == "VERB"
-                or sent.words[word.head - 1].text in wn_evnouns
+                or sent.words[word.head - 1].text in event_nouns
             ):
                 closest_mod = get_closest_mod(sent, word)
                 entities.append(determine_entities(sent, word, closest_mod))
