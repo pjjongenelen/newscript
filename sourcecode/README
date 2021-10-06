@@ -1,0 +1,164 @@
+The package contains implementations of slot model in 
+	K. H. Nguyen, X. Tannier, O. Ferret, R. Bensancon. 'Generative Event Schema 
+Induction with Entity Disambiguation'. ACL-IJCNLP 2015.	
+and the full template model in 
+	Nate Chambers. Event Schema Induction with a Probabilistic Entity-Driven Model.
+EMNLP 2013.
+
+The code are partially based on LDA implementation at
+	http://www.arbylon.net/projects/LdaGibbsSampler.java
+
+The tool is freely available for research purpose, any use should cite the following:
+
+	K. H. Nguyen, X. Tannier, O. Ferret, R. Bensancon. 'Generative Event Schema 
+Induction with Entity Disambiguation'. ACL-IJCNLP 2015.	
+
+# Package structure
+
+Sub-folders are:
+	./lib/							Library
+	./javadoc/					Javadoc
+	./src/							Source codes
+	./roleinducer.jar		Binary class files
+	./README						This file
+	./muc-dev-tst1-4		MUC data file
+
+# To reproduce ACL paper results of slot model:
+
+     My directory: C:/Users/timjo/OD/Silva Ducis/Master Thesis/sourcecode/src/astre/resource/
+
+	#1	
+	java -cp roleinducer.jar:lib/* astre/mucParsing/MUC4ParallelParsing muc-dev-tst1-4 parsed
+	#2
+	java -cp roleinducer.jar:lib/* astre/preprocessing/DocumentIndexing parsed index
+	#3
+	java -cp roleinducer.jar:lib/* astre/entityDisambiguation/SlotModel -index index -model model
+	#4 
+	java -cp roleinducer.jar:lib/* astre/entityDisambiguation/TopicAssignment -index index -model model -lbl label
+	#5
+	java -cp roleinducer.jar:lib/* astre/Evaluation/SlotMapping	-assignments label -eventTypes 1 -slots 35 -filler fillers
+	#6
+	java -cp roleinducer.jar:lib/* astre/Evaluation/Evaluation -filler fillers
+
+# To reproduce ACL paper results of Chambers2013 model (reimplementation):
+
+	#1	
+	java -cp roleinducer.jar:lib/* astre/mucParsing/MUC4ParallelParsing muc-dev-tst1-4 parsed
+	#2
+	java -cp roleinducer.jar:lib/* astre/preprocessing/DocumentIndexing parsed index
+	#3
+	java -cp roleinducer.jar:lib/* astre/entityDisambiguation/nest/NestModel -index index -model model
+	#4 
+	java -cp roleinducer.jar:lib/* astre/entityDisambiguation/nest/TopicAssignment -index index -model model -lbl label_nestmodel
+	#5
+	java -cp roleinducer.jar:lib/* astre/Evaluation/SlotMapping	-assignments label_nestmodel -eventTypes 1 -slots 35 -filler fillers_nestmodel
+	#6
+	java -cp roleinducer.jar:lib/* astre/Evaluation/Evaluation -filler fillers_nestmodel
+
+
+# Execution (required Java 1.7 or higher)
+
+	- Parsing documents using Stanford NLP toolkit (in parallel)
+
+			java -cp roleinducer.jar:lib/* astre/mucParsing/MUC4ParallelParsing
+
+			usage: MUC4ParallelParsing [muc_data_file] [output_directory]
+
+	- Extracting entities from parsed documents and creating an index
+
+			java -cp roleinducer.jar:lib/* astre/preprocessing/DocumentIndexing
+
+			usage: DocumentIndexing [parsed_documents_directory] [index_file]
+
+	- Learning a slot model from a collection of entities
+
+			java -cp roleinducer.jar:lib/* astre/entityDisambiguation/SlotModel
+
+			usage: SlotModel
+			 -att            (optional) using attributes (default false)
+			 -beta_a <arg>   (optional) att-slot dirichlet (default .1)
+			 -beta_h <arg>   (optional) head-slot dirichlet (default 1)
+			 -beta_t <arg>   (optional) trigger-slot dirichlet (default .1)
+			 -burn <arg>     (optional) burn-in iterations (default 2000)
+			 -index <arg>    index file
+			 -iter <arg>     (optional) number of iterations (default 10000)
+			 -lag <arg>      (optional) sample lag (default 10)
+			 -model <arg>    output model file
+			 -rand <arg>     (optional) random seed (default 1)
+			 -slot <arg>     (optional) number of slots (default 35)
+			 -step <arg>     (optional) interval step (default 100)
+
+		* Generating topic assignments
+
+			java -cp roleinducer.jar:lib/* astre/entityDisambiguation/TopicAssignment
+
+			usage: TopicAssignment
+			 -index <arg>   input index file
+			 -lbl <arg>     output slot labeled file
+			 -model <arg>   input model file
+
+		* Display topic distributions
+
+java -cp roleinducer.jar:lib/* astre/entityDisambiguation/TopicDistribution
+
+usage: TopicDistribution
+ -index <arg>   input index file
+ -model <arg>   input model file
+
+	- Learning a full template model from a collection of entities (and documents)
+
+			java -cp roleinducer.jar:lib/* astre/entityDisambiguation/nest/NestModel
+
+			usage: NestModel
+			 -alpha <arg>    (optional) doc-type dirichlet (default 1)
+			 -att            (optional) using attributes (default false)
+			 -beta_a <arg>   (optional) att-slot dirichlet (default .1)
+			 -beta_h <arg>   (optional) head-slot dirichlet (default 1)
+			 -beta_p <arg>   (optional) predicate-type dirichlet (default 1)
+			 -beta_t <arg>   (optional) trigger-slot dirichlet (default .1)
+			 -burn <arg>     (optional) burn-in iterations (default 2000)
+			 -index <arg>    output index file
+			 -iter <arg>     (optional) number of iterations (default 10000)
+			 -lag <arg>      (optional) sample lag (default 10)
+			 -model <arg>    output model file
+			 -rand <arg>     (optional) random seed (default 1)
+			 -slot <arg>     (optional) number of slots (default 10)
+			 -step <arg>     (optional) interval step (default 100)
+			 -type <arg>     (optional) number of event types (default 20)
+
+		* Generating topic assignments
+
+			java -cp roleinducer.jar:lib/* astre/entityDisambiguation/nest/TopicAssignment
+
+			usage: TopicAssignment
+			 -index <arg>   input index file
+			 -lbl <arg>     output slot labeled file
+			 -model <arg>   input model file
+
+		* Display topic distributions
+
+			java -cp roleinducer.jar:lib/* astre/entityDisambiguation/nest/TopicDistribution
+
+			usage: TopicDistribution
+			 -index <arg>   input index file
+			 -model <arg>   input model file
+
+	- Evaluation using MUC3-4 dataset
+
+		* Building slot fillers using slot mapping technique 
+
+			java -cp roleinducer.jar:lib/* astre/Evaluation/SlotMapping
+
+			usage: SlotMapping
+			 -assignments <arg>   slot labeled documents
+			 -eventTypes <arg>    number of event types
+			 -filler <arg>        output filer file
+			 -slots <arg>         number of slots
+
+		* Slot filling evaluation
+
+			java -cp roleinducer.jar:lib/* astre/Evaluation/Evaluation
+
+			usage: Evaluation
+			 -filler <arg>   system slot fillers
+			 -verbose        more information
