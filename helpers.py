@@ -19,7 +19,6 @@ def create_pipeline():
         processors="tokenize,mwt,pos,lemma,depparse",
         logging_level="WARN",
     )
-    # TODO: Zijn dit wel de goeie processoren?
     return stanza.Pipeline(
         lang="en", processors="tokenize,mwt,pos,lemma,depparse", verbose=False
     )
