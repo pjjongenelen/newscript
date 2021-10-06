@@ -13,5 +13,5 @@ The most important python packages that are used for this are NLTK/Wordnet and S
 
 ---
 Currently the project is still very much under development, the current status is:
-- Nguyen et al.      Wokring code from paper in folder 'sourcecode' (except truecase annotation)
+- Nguyen et al.      Working code from paper in folder 'sourcecode', baseline results in two txt files
 - Weber et al.       [NOT STARTED YET]
