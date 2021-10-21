@@ -1,4 +1,3 @@
-from json import load
 from nltk.corpus import wordnet
 from warnings import catch_warnings, simplefilter
 
@@ -187,20 +186,7 @@ def determine_entities(sent, word, closest_mod):
         ]
     return result
 
-def load_data(n):    
-    # create the raw dataset
-    data = []
-    doc = 0
-    while len(data) < n:
-        with open(f"C:/Users/s161158/OneDrive - TU Eindhoven/Silva Ducis/Master_Thesis/drugs data/{doc}.json") as f:
-            raw = load(f)
-        for _ in raw:
-            content = _['article_contentRaw']
-            if isinstance(content, str):
-                data.append(content)
-        data = list(set(data))
-    
-    return data[:n]
+
 
 def to_chambers_ent(ent):
     # transforms the Nguyen event representation into that of Chambers (2011)

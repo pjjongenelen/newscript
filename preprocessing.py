@@ -3,6 +3,7 @@ import json
 from truecase import get_true_case
 
 
+
 def muc_to_truecase(input_path: str, output_path: str):
     # convert the muc dataset from Nguyen to true case to bypass the deprecated first part of their code (commented out)
     with open(input_path, "r") as f:
