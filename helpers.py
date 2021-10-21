@@ -16,7 +16,7 @@ def create_pipeline():
     # Create Stanza pipeline
     stanza.download(
         lang="en",
-        processors="tokenize,mwt,pos,lemma,depparse",
+        processors="tokenize,pos,lemma,depparse",
         logging_level="WARN",
     )
     return stanza.Pipeline(
