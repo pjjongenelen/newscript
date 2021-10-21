@@ -6,12 +6,12 @@ This is relevant, as the current state of the art is mostly only evaluated on cu
 
 ---
 We will use the methods as described by:
+- Chambers & Jurafsky (2011) Template-based information extraction without the templates
 - Nguyen et al. (2015). Generative Event Schema Induction with Entity Disambiguation
-(- Weber et al. (2020). Causal Inference of Script Knowledge)
 
 The most important python packages that are used for this are NLTK/Wordnet and Stanza (feel free to pronounce the latter in the voice of Petyr Baelish).
 
 ---
 Currently the project is still very much under development, the current status is:
-- Nguyen et al.      Working code from paper in folder 'sourcecode', baseline results in two txt files
-- Weber et al.       [NOT STARTED YET]
+- Chambers & Jurafsky   Working code from paper in template_extraction.ipynb
+- Nguyen et al.         Working code from paper in folder 'sourcecode', baseline results in two txt files
