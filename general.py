@@ -42,6 +42,6 @@ def load_drugs_data(data_path: str, cols: list, n = 776569) -> list:
             print(f"Loaded {n} articles.")
         else:
             if json_doc % 100 == 0:
-                    print(f'Loaded {len(data)} articles from the {json_doc} out of 1572 json files.')
+                    print(f'Loaded {len(data)} articles from {json_doc} out of 1572 json files.')
     
     return data[:n]
