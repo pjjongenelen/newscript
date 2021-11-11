@@ -6,7 +6,7 @@
 3. [Snippets](Snippets)
 
 ## MUC-4
-We use a version of the MUC-4 dataset provided by Nguyen et al. (2015) as our raw data source. The original MUC-4 data contains many elements that are not usually present in news articles, and Nguyen et al. filtered out precisely this information. This includes annotation details from radio intervies, non-alphanumeric characters, etc.  
+We use a version of the MUC-4 dataset provided by Nguyen et al. (2015) as our raw data source. The original MUC-4 data contains many elements that are not usually present in news articles such as annotation details from radio intervies, non-alphanumeric characters, etc. Nguyen et al. filtered out precisely this information, which saves us a preprocessing step whilst maintaining all content of the dataset that is relevant in the scope of this project.
 For a comparison between the original and the data from Nguyen, see the snippets at the end of this document.  
 
 Source: https://www-nlpir.nist.gov/related_projects/muc/muc_data/muc_data_index.html  
