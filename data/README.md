@@ -11,6 +11,7 @@ For a comparison between the original and the data from Nguyen, see the snippets
 
 Source: https://www-nlpir.nist.gov/related_projects/muc/muc_data/muc_data_index.html  
 Size: 1700 news articles, ~3.2 MB  
+Format: plain text
 Contact: https://www.ldc.upenn.edu/about/contact-ldc  
 
 ## GNM
@@ -18,6 +19,7 @@ Global News Monitor (GNM), a horizon scanning service from Center for Innovation
 
 Source: Personal correspondence with Dr. Klerx  
 Size: 776.569 news articles, ~7.8 GB  
+Format: JSON
 Contact: Joachim Klerx, Joachim.klerx@ait.ac.at  
 
 ## Snippets
