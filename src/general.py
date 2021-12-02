@@ -1,7 +1,22 @@
 from json import load
+import pandas as pd
 import pickle
 
-def load_drugs_data(data_path: str, cols: list, n = 776569) -> list:
+def load_muc(path = 'sourcecode/muc-dev-tst1-4'):
+    # load the muc data from the file we got from Nguyen
+    df = pd.read_csv(path, sep = '\t', names = ['muc_id', 'location'])
+
+    # split the second column
+    df = split_df_column(df, col1 = 'location', col2 = 'date', sep = ', ')
+    # these lines do not have ' -- ' between the date and text, so let's insert that before splitting
+    for x in range(1243, 1246):
+        df.loc[x]['date'] = df.loc[x]['date'][:9] + " --" + df.loc[x]['date'][9:]
+    # split the third column
+    df = split_df_column(df, col1 = 'date', col2 = 'text', sep = ' -- ')
+
+    return df
+
+def load_gnm(data_path: str, cols: list, n = 776569) -> list:
     """Retrieves a specified number (n) of articles from the drugs database
 
     Parameters
