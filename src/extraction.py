@@ -4,32 +4,6 @@ from warnings import catch_warnings, simplefilter
 import numpy as np
 import stanza
 
-
-
-def event_extraction(docs, type):
-
-    event_nouns = define_event_nouns()
-    print(f"Identified {len(event_nouns)} eventive nouns.")
-    
-    entities = [get_entities(doc, event_nouns) for doc in docs]
-    counter = 0
-    for e in entities:
-        counter += len(e)
-    # print(f'Extracted {counter} elements from {len(entities)} input documents.')
-
-    if type == "Chambers":
-        c_entities = [to_chambers_ent(e) for e in entities]
-        return [entities, c_entities]
-    else:
-        return entities
-
-def template_extraction(ent):
-    nested_entities = create_nested_entites(ent)
-
-    templates = get_pmi_matrix(nested_entities)
-
-    return templates
-
 def create_nested_entites(ent, type):
     # input: list of entities resulting from event_extraction
     # output: list of lists with entities per sentence
@@ -56,7 +30,7 @@ def create_pipeline():
     # Create Stanza pipeline
     stanza.download(
         lang="en",
-        processors="tokenize,pos,lemma,depparse",
+        processors="tokenize,mwt,pos,lemma,depparse",
         logging_level="WARN",
     )
     return stanza.Pipeline(lang="en", processors="tokenize,mwt,pos,lemma,depparse", verbose=False)
@@ -77,6 +51,23 @@ def define_event_nouns():
                 ]
             )
         )
+
+def event_extraction(docs, type):
+
+    event_nouns = define_event_nouns()
+    print(f"Identified {len(event_nouns)} eventive nouns.")
+    
+    entities = [get_entities(doc, event_nouns) for doc in docs]
+    counter = 0
+    for e in entities:
+        counter += len(e)
+    # print(f'Extracted {counter} elements from {len(entities)} input documents.')
+
+    if type == "Chambers":
+        c_entities = [to_chambers_ent(e) for e in entities]
+        return [entities, c_entities]
+    else:
+        return entities
 
 
 def get_entities(doc, event_nouns):
@@ -186,7 +177,12 @@ def determine_entities(sent, word, closest_mod):
         ]
     return result
 
+def template_extraction(ent):
+    nested_entities = create_nested_entites(ent)
 
+    templates = get_pmi_matrix(nested_entities)
+
+    return templates
 
 def to_chambers_ent(ent):
     # transforms the Nguyen event representation into that of Chambers (2011)

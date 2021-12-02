@@ -7,8 +7,8 @@ import helpers
 import os
 import pandas as pd
 
-def load_muc(path = 'src/srcNguyen/muc-dev-tst1-4'):
-    print(os.getcwd())
+def load_muc(path = '\\srcNguyen\\muc-dev-tst1-4'):
+    path = os.getcwd() + path
 
     # load the muc data from the file we got from Nguyen
     df = pd.read_csv(path, sep = '\t', names = ['muc_id', 'location'])
@@ -23,6 +23,8 @@ def load_muc(path = 'src/srcNguyen/muc-dev-tst1-4'):
     df = helpers.split_df_column(df, col1 = 'date', col2 = 'text', sep = ' -- ')
 
     return df
+
+load_muc()
 
 def load_gnm(data_path: str, cols: list, n = 776569) -> list:
     """Retrieves a specified number (n) of articles from the drugs database
