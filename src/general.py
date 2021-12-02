@@ -1,18 +1,26 @@
-from json import load
-import pandas as pd
-import pickle
+"""
+Most important general functions that are used in the template extraction process
+"""
 
-def load_muc(path = 'sourcecode/muc-dev-tst1-4'):
+from json import load
+import helpers
+import os
+import pandas as pd
+
+def load_muc(path = 'src/srcNguyen/muc-dev-tst1-4'):
+    print(os.getcwd())
+
     # load the muc data from the file we got from Nguyen
     df = pd.read_csv(path, sep = '\t', names = ['muc_id', 'location'])
 
     # split the second column
-    df = split_df_column(df, col1 = 'location', col2 = 'date', sep = ', ')
-    # these lines do not have ' -- ' between the date and text, so let's insert that before splitting
+    df = helpers.split_df_column(df, col1 = 'location', col2 = 'date', sep = ', ')
+    
+    # split the third column
+    # lines 1243 and 1246 do not have ' -- ' between the date and text, so let's insert that before the next split
     for x in range(1243, 1246):
         df.loc[x]['date'] = df.loc[x]['date'][:9] + " --" + df.loc[x]['date'][9:]
-    # split the third column
-    df = split_df_column(df, col1 = 'date', col2 = 'text', sep = ' -- ')
+    df = helpers.split_df_column(df, col1 = 'date', col2 = 'text', sep = ' -- ')
 
     return df
 

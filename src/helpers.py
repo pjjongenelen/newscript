@@ -1,11 +1,12 @@
+"""
+File that contains functions to make other code more readable.
+"""
+
 # TODO: clean up imports
 import gensim
 from gensim import models
-from gensim.utils import simple_preprocess
-from gensim.parsing.preprocessing import STOPWORDS
-from nltk.stem import WordNetLemmatizer, SnowballStemmer
 from nltk.stem.porter import *
-import pandas as pd
+import os
 import stanza
 
 
@@ -30,20 +31,6 @@ def create_pipeline():
     return stanza.Pipeline(
         lang="en", processors="tokenize,mwt,pos,lemma,depparse", verbose=False
     )
-
-def load_muc(path = 'sourcecode/muc-dev-tst1-4'):
-    # load the muc data from the file we got from Nguyen
-    df = pd.read_csv(path, sep = '\t', names = ['muc_id', 'location'])
-
-    # split the second column
-    df = split_df_column(df, col1 = 'location', col2 = 'date', sep = ', ')
-    # these lines do not have ' -- ' between the date and text, so let's insert that before splitting
-    for x in range(1243, 1246):
-        df.loc[x]['date'] = df.loc[x]['date'][:9] + " --" + df.loc[x]['date'][9:]
-    # split the third column
-    df = split_df_column(df, col1 = 'date', col2 = 'text', sep = ' -- ')
-
-    return df
 
 def split_df_column (df, col1, col2, sep):
     # split col1 of a dataframe into col1 and col2 based on separator sep
