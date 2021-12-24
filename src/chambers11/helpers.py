@@ -72,7 +72,7 @@ class Article:
     def __init__(self, text):
         self.text = text
         self.annotation = PIPE(self.text)
-        self.event_patterns = get_noun_patterns(self.annotation) + get_verb_patterns(self.annotation)
+        self.event_patterns = list(set(get_noun_patterns(self.annotation) + get_verb_patterns(self.annotation)))
 
     def get_text(self):
         return self.text
