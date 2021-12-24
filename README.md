@@ -6,7 +6,7 @@ This project aims to evaluate the viability of automatic template extraction in 
 ---
 We will use template extraction methods as described by:
 - Chambers & Jurafsky (2011) Template-based information extraction without the templates
-- Nguyen et al. (2015). Generative Event Schema Induction with Entity Disambiguation
+- Nguyen et al. (2015) Generative Event Schema Induction with Entity Disambiguation
 
 ---
 Currently the project is still very much under development, the current status is:
