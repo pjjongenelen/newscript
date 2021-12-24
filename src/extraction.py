@@ -4,13 +4,14 @@ from warnings import catch_warnings, simplefilter
 import numpy as np
 import stanza
 
+
 def create_nested_entites(ent, type):
     # input: list of entities resulting from event_extraction
     # output: list of lists with entities per sentence
     if type == "Chambers":
-        invalid_count = sum(map(lambda x : len(x) != 3, ent))
+        invalid_count = sum(map(lambda x: len(x) != 3, ent))
     if type == "Nguyen":
-        invalid_count = sum(map(lambda x : len(x) != 8, ent))
+        invalid_count = sum(map(lambda x: len(x) != 8, ent))
 
     if invalid_count == 0:
         for d in range(len(ent)):
@@ -21,10 +22,11 @@ def create_nested_entites(ent, type):
 
         print("Entity list processing succesful.")
         return ent_per_sent
-    
+
     else:
         print("Entity list processing unsuccesful.")
-        print(f"Something is wrong with the input data shape, elements are of length {len(ent[0])} instead of 8.")   
+        print(f"Something is wrong with the input data shape, elements are of length {len(ent[0])} instead of 8.")
+
 
 def create_pipeline():
     # Create Stanza pipeline
@@ -35,28 +37,26 @@ def create_pipeline():
     )
     return stanza.Pipeline(lang="en", processors="tokenize,mwt,pos,lemma,depparse", verbose=False)
 
+
 def define_event_nouns():
     # Define a list of eventive nouns
     with catch_warnings():
         simplefilter("ignore")
-        return list(
-            set(
-                [
-                    w
-                    for s in wordnet.synset("event.n.01").closure(
-                        lambda s: s.hyponyms()
-                    )
-                    or wordnet.synset("act.n.02").closure(lambda s: s.hyponyms())
-                    for w in s.lemma_names()
-                ]
-            )
-        )
+
+        eventive_nouns = [
+            w
+            for s in wordnet.synset("event.n.01").closure(lambda s: s.hyponyms())
+                     or wordnet.synset("act.n.02").closure(lambda s: s.hyponyms())
+            for w in s.lemma_names()
+        ]
+
+        return list(set(eventive_nouns))
+
 
 def event_extraction(docs, type):
-
     event_nouns = define_event_nouns()
     print(f"Identified {len(event_nouns)} eventive nouns.")
-    
+
     entities = [get_entities(doc, event_nouns) for doc in docs]
     counter = 0
     for e in entities:
@@ -76,8 +76,8 @@ def get_entities(doc, event_nouns):
     for sent in doc.sentences:
         for word in sent.words:
             if word.upos == "NOUN" and (
-                sent.words[word.head - 1].upos == "VERB"
-                or sent.words[word.head - 1].text in event_nouns
+                    sent.words[word.head - 1].upos == "VERB"
+                    or sent.words[word.head - 1].text in event_nouns
             ):
                 closest_mod = get_closest_mod(sent, word)
                 entities.append(determine_entities(sent, word, closest_mod))
@@ -89,12 +89,13 @@ def get_closest_mod(sent, word):
     closest_mod = [sent.id, -3, 100000, ""]
     for mod in sent.words:
         if (
-            "mod" in mod.deprel
-            and mod.head == word.id
-            and abs(word.id - mod.id) < closest_mod[2]
+                "mod" in mod.deprel
+                and mod.head == word.id
+                and abs(word.id - mod.id) < closest_mod[2]
         ):
             closest_mod = [sent.id, mod.id, abs(word.id - mod.id), mod.text]
     return closest_mod
+
 
 def get_pmi_matrix(events):
     # input: list of entities in chambers' format
@@ -140,8 +141,8 @@ def get_pmi_matrix(events):
         for y in range(len(sorted_set)):
             cdist[x][y] = cdist[x][y] / (sum_cdist - cdist[x][y])
         if x % 500 == 0:
-            print(f'Done {x+1} out of {len(sorted_set)}')
-    
+            print(f'Done {x + 1} out of {len(sorted_set)}')
+
     # note that at this point, cdist is actually equal to pdist in the paper
     # calculate pmi values
     for x in range(len(sorted_set)):
@@ -149,6 +150,7 @@ def get_pmi_matrix(events):
             cdist[x][y] = cdist[x][y] / (pw[x] * pw[y])
 
     return cdist, flat_events, sorted_set
+
 
 def get_cdist_coor(flatlist, wordx, wordy):
     x = flatlist.index(wordx)
@@ -177,12 +179,14 @@ def determine_entities(sent, word, closest_mod):
         ]
     return result
 
+
 def template_extraction(ent):
     nested_entities = create_nested_entites(ent)
 
     templates = get_pmi_matrix(nested_entities)
 
     return templates
+
 
 def to_chambers_ent(ent):
     # transforms the Nguyen event representation into that of Chambers (2011)
