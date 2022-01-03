@@ -2,58 +2,33 @@
 Simple code snippets that make the 1_, 2_, and 3_ files more readable
 """
 
+
 import en_core_web_sm
+from itertools import combinations
+import math
 from nltk.corpus import wordnet
-from random import sample
-from time import perf_counter
+from tqdm import tqdm
 
 
-def get_noun_patterns(annotation):
-    """Extract event nouns based on the WorNet synsets"""
+def get_ner(word, dict):
+    """
+    Try to replace the word with its appropriate NER tag
+    """
+    word = word.text.lower()
 
-    # define the event nouns
-    ev_nouns = define_event_nouns()
-
-    matches = []
-    for sent in annotation.sentences:
-        for word in sent.words:
-            if word.text in ev_nouns:
-                matches.append(word.text.lower() + ":N")
-
-    return matches
-
-
-def get_verb_patterns(annotation):
-    """Extract verbs and their syntactic object head words"""
-
-    # create a dict to transform objects to NER labels if applicable
-    ner_dict = get_ner_dict(annotation)
-
-    # TODO: simplify this nested structure
-    # extract verbs and their object head words
-    matches = []
-    for sent in annotation.sentences:
-        for word in sent.words:
-            if word.upos == 'VERB':
-                # check if there is a corresponding object
-                obj = ""
-                for word2 in sent.words:
-                    if 'obj' in word2.deprel and word2.head == word.id:
-                        if word2.text.lower() in ner_dict.keys():
-                            # get the NER label for the object
-                            obj = ner_dict[word2.text.lower()]
-                        else:
-                            # get the regular object text
-                            obj = word2.text.upper()
-                if obj != "":
-                    matches.append(word.text.lower() + ":" + obj.upper())
-                else:
-                    matches.append(word.text.lower())
-
-    return matches
+    if word in dict.keys():
+        # replace word with NER tag
+        return dict[word]
+    else:
+        # no NER tag available
+        return word
 
 
 def get_ner_dict(annotation):
+    """
+    Creates a dictionary with nouns and their corresponding NER tags according to Spacy's en_core_web_sm model
+    """
+
     nlp = en_core_web_sm.load()
     ner_list = []
     for sent in annotation.sentences:
@@ -63,17 +38,10 @@ def get_ner_dict(annotation):
     return dict(ner_list)
 
 
-def conditional_sample(articles, amount):
-    """Sample articles, or return all available"""
-
-    if 0 < amount < len(articles):
-        return sample(articles, amount)
-    else:
-        return articles
-
-
 def define_event_nouns():
-    """Define a list of event nouns"""
+    """
+    Defines a list of event nouns based on the two WordNet synsets used by Chambers & Jurafsky
+    """
 
     n01 = wordnet.synset("event.n.01").closure(lambda s: s.hyponyms())
     n02 = wordnet.synset("act.n.02").closure(lambda s: s.hyponyms())
@@ -82,36 +50,39 @@ def define_event_nouns():
 
     return list(set(event_nouns))
 
-class TimerError(Exception):
-    """A custom exception"""
+
+def get_events_set(df):
+    """
+    Create sorted list of the set of events in order to look up indices in the cdist matrix later on
+    """
+    # get all events
+    event_patterns = df['event_patterns'].tolist()
+    events = [event[0] for ep in event_patterns for event in ep]
+    # remove duplicates and sort
+    ev_set = sorted(set(events))
+
+    return ev_set
+
+def fill_cdist_matrix(df, main_matrix, ev_set):
+    """
+    Follows the cdist formula from page 979 of the article: 
     
-class Timer:
-    """Timer class to measure code running times"""
-    def __init__(self) -> None:
-        self._start_time = None
+    cdist(wi, wi) = 1 - ( log_4 of g(wi, wj) ) 
+    Summed over all event pairs (wi, wj) in all documents (d):
+
+    Note that the variable names might seem undescriptive, but they're chosen to be equal to those from the formula 
+    """
     
-    def start(self):
-        "Start a new timer"
-        if self._start_time is not None:
-            raise TimerError("Timer is running. Use .stop() to stop it.")
-        
-        self._start_time = perf_counter()
+    for _, d in tqdm(df.iterrows(), total=df.shape[0]):  # for all documents d
+        for wi, wj in list(combinations(d['event_patterns'], 2)):  # for all pairs of events wi, wj
+            # calculate the single cdist value
+            g = abs(wi[1] - wj[1]) + 1
+            c_dist = max((1 - math.log(g, 4)), 0)
 
-    def stop(self):
-        """Stop the timer and report the elapsed time"""
-        if self._start_time is None:
-            raise TimerError("No timer is running. Use .start() to start one.")
+            # add this number to the main matrix
+            wi_index = ev_set.index(wi[0])
+            wj_index = ev_set.index(wj[0])
+            main_matrix[wi_index, wj_index] += c_dist
 
-        elapsed_time = perf_counter() - self._start_time
-        self._start_time = None
-        print(f"Elapsed time: {elapsed_time:0.4f} seconds")
-
-    def stop_go(self):
-        """Stop the timer, report the elapsed time, and immediately start a new one"""
-        if self._start_time is None:
-            raise TimerError("No timer is running. Use .start() to start one.")
-
-        elapsed_time = perf_counter() - self._start_time
-        print(f"Elapsed time: {elapsed_time:0.4f} seconds")
-        self._start_time = perf_counter()
+    return main_matrix
         
