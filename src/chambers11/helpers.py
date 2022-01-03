@@ -5,10 +5,7 @@ Simple code snippets that make the 1_, 2_, and 3_ files more readable
 import en_core_web_sm
 from nltk.corpus import wordnet
 from random import sample
-import stanza
-
-stanza.download(lang="en", processors="tokenize,pos,lemma,depparse", logging_level="WARN")
-PIPE = stanza.Pipeline(lang="en", processors="tokenize,mwt,pos,lemma,depparse", verbose=False)
+from time import perf_counter
 
 
 def get_noun_patterns(annotation):
@@ -66,21 +63,6 @@ def get_ner_dict(annotation):
     return dict(ner_list)
 
 
-class Article:
-    """Class for articles that contains the most important information for clustering"""
-
-    def __init__(self, text):
-        self.text = text
-        self.annotation = PIPE(self.text)
-        self.event_patterns = list(set(get_noun_patterns(self.annotation) + get_verb_patterns(self.annotation)))
-
-    def get_text(self):
-        return self.text
-
-    def get_event_patterns(self):
-        return self.event_patterns
-
-
 def conditional_sample(articles, amount):
     """Sample articles, or return all available"""
 
@@ -99,3 +81,37 @@ def define_event_nouns():
     event_nouns = [w for s in n01 or n02 for w in s.lemma_names()]
 
     return list(set(event_nouns))
+
+class TimerError(Exception):
+    """A custom exception"""
+    
+class Timer:
+    """Timer class to measure code running times"""
+    def __init__(self) -> None:
+        self._start_time = None
+    
+    def start(self):
+        "Start a new timer"
+        if self._start_time is not None:
+            raise TimerError("Timer is running. Use .stop() to stop it.")
+        
+        self._start_time = perf_counter()
+
+    def stop(self):
+        """Stop the timer and report the elapsed time"""
+        if self._start_time is None:
+            raise TimerError("No timer is running. Use .start() to start one.")
+
+        elapsed_time = perf_counter() - self._start_time
+        self._start_time = None
+        print(f"Elapsed time: {elapsed_time:0.4f} seconds")
+
+    def stop_go(self):
+        """Stop the timer, report the elapsed time, and immediately start a new one"""
+        if self._start_time is None:
+            raise TimerError("No timer is running. Use .start() to start one.")
+
+        elapsed_time = perf_counter() - self._start_time
+        print(f"Elapsed time: {elapsed_time:0.4f} seconds")
+        self._start_time = perf_counter()
+        
