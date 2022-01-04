@@ -2,12 +2,23 @@
 Simple code snippets that make the 1_, 2_, and 3_ files more readable
 """
 
-
+import numpy as np
 import en_core_web_sm
-from itertools import combinations
-import math
 from nltk.corpus import wordnet
 from tqdm import tqdm
+
+
+def get_ner_dict(annotation):
+    """
+    Creates a dictionary with nouns and their corresponding NER tags according to Spacy's en_core_web_sm model
+    """
+    nlp = en_core_web_sm.load()
+    ner_list = []
+    for sent in annotation.sentences:
+        doc = nlp(sent.text)
+        ner_list += [(X.text.lower(), X.label_) for X in doc.ents]
+
+    return dict(ner_list)
 
 
 def get_ner(word, dict):
@@ -22,20 +33,6 @@ def get_ner(word, dict):
     else:
         # no NER tag available
         return word
-
-
-def get_ner_dict(annotation):
-    """
-    Creates a dictionary with nouns and their corresponding NER tags according to Spacy's en_core_web_sm model
-    """
-
-    nlp = en_core_web_sm.load()
-    ner_list = []
-    for sent in annotation.sentences:
-        doc = nlp(sent.text)
-        ner_list += [(X.text.lower(), X.label_) for X in doc.ents]
-
-    return dict(ner_list)
 
 
 def define_event_nouns():
@@ -53,7 +50,7 @@ def define_event_nouns():
 
 def get_events_set(df):
     """
-    Create sorted list of the set of events in order to look up indices in the cdist matrix later on
+    Create sorted list of the set of events in order to look up indices in matrices later on
     """
     # get all events
     event_patterns = df['event_patterns'].tolist()
@@ -63,26 +60,50 @@ def get_events_set(df):
 
     return ev_set
 
-def fill_cdist_matrix(df, main_matrix, ev_set):
+
+def get_p_dict(df):
     """
-    Follows the cdist formula from page 979 of the article: 
-    
-    cdist(wi, wi) = 1 - ( log_4 of g(wi, wj) ) 
-    Summed over all event pairs (wi, wj) in all documents (d):
-
-    Note that the variable names might seem undescriptive, but they're chosen to be equal to those from the formula 
+    Create a dict of event counts
     """
+
+    # get all events
+    event_patterns = df['event_patterns'].tolist()
+    events = [event[0] for ep in event_patterns for event in ep]
+
+    # create dataframe with event counts
+    event_counts = events.value_counts().rename_axis('event').reset_index(name='count')
+
+    # now calculate for each event its count / the sum of the count of all others
+    event_counts['countfrac'] = event_counts['countfrac'] / (event_counts['count'].sum() - event_counts['countfrac'])
+
+    return dict(zip(event_counts['event'], event_counts['countfrac']))
+
+
+def make_pdist_matrix(cdist_matrix):
+    """
+    Calculates pdist values given the cdist matrix based on the formula on page 979
+    pdist(wi, wj) = cdist(wi, wj) / ( sum_all_cdist(wk, wl) )
     
-    for _, d in tqdm(df.iterrows(), total=df.shape[0]):  # for all documents d
-        for wi, wj in list(combinations(d['event_patterns'], 2)):  # for all pairs of events wi, wj
-            # calculate the single cdist value
-            g = abs(wi[1] - wj[1]) + 1
-            c_dist = max((1 - math.log(g, 4)), 0)
+    The denominator can be calculated by:
+    sum(cdist_matrix) - ( sum(row_i) + sum(col_j) - cdist(wi, wj) )
+    """
 
-            # add this number to the main matrix
-            wi_index = ev_set.index(wi[0])
-            wj_index = ev_set.index(wj[0])
-            main_matrix[wi_index, wj_index] += c_dist
+    # create empty pdist matrix
+    pdist_matrix = np.zeros(cdist_matrix.shape)
 
-    return main_matrix
-        
+    # calculate sum(cdist_matrix)
+    cdist_sum = sum(cdist_matrix.sum(axis=1).tolist())
+    
+    # get the column sums for reduced running time in the nested loop
+    sum_col_j = []
+    for j in range(cdist_matrix.shape[1]):
+        sum_col_j.append(cdist_matrix[:,j].sum())
+
+    # fill the pdist matrix
+    for i in tqdm(range(cdist_matrix.shape[0])):
+        sum_row_i = cdist_matrix[i,].sum()
+        for j in range(cdist_matrix.shape[1]):
+            cdist = cdist_matrix[i,j]
+            pdist_matrix[i,j] = cdist / (cdist_sum - (sum_row_i + sum_col_j[j] - cdist))
+
+    return pdist_matrix
