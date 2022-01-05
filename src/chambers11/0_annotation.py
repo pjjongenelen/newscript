@@ -3,7 +3,9 @@ Annotates all MUC articles with a Stanza pipeline, also extracts event pattersn.
 The resulting dataframe is saved to a pickle file.
 """
 
+import en_core_web_sm
 import helpers
+from os.path import exists
 import pandas as pd
 import stanza
 from tqdm import tqdm
@@ -17,6 +19,7 @@ def load_muc() -> pd.DataFrame:
     """Loads MUC csv file and returns as dataframe"""
     df = pd.read_csv(ROOT + '\\processed_data\\muc.csv', index_col=0)
     return df
+
 
 def annotate(df) -> pd.DataFrame:
     """Annotates each article with the Stanza pipeline."""
@@ -33,13 +36,14 @@ def annotate(df) -> pd.DataFrame:
     df['annotation'] = annotations
     return df
 
+
 def get_noun_patterns(annotation):
     """
     Extract event nouns based on the WorNet synsets
     """
 
     # get a list of the WordNet event nouns
-    ev_nouns = helpers.define_event_nouns()
+    ev_nouns = helpers.get_event_nouns()
 
     matches = []
     for sent in annotation.sentences:
@@ -49,28 +53,31 @@ def get_noun_patterns(annotation):
 
     return matches
 
+
 def get_verb_patterns(annotation):
     """
     Extract verbs and their syntactic object head words
     """
 
     matches = []
+    nlp = en_core_web_sm.load()
 
-    # get dict to transform object words into NER tags
-    ner_dict = helpers.get_ner_dict(annotation)
-
-    # extract verbs and their object head words
+    # extract verbs and their object head words (if they have one)
     for sent in annotation.sentences:
         for word1 in sent.words:
+            # find all verbs
             if word1.upos == 'VERB':
+                # look for a corresponding object
                 obj = None
                 for word2 in sent.words:
                     if 'obj' in word2.deprel and word2.head == word1.id:
-                        obj = helpers.get_ner(word2, ner_dict)
-                if obj:
-                    matches.append([word1.text + ":" + obj, sent.id])
-                else:
-                    matches.append([word1.text, sent.id])
+                        # check for available NER tag
+                        ann = nlp(word2.text)
+                        obj = ann.ents[0].label_ if len(ann.ents) > 0 else word2.lemma
+                        break
+
+                # put the event pattern in the list
+                matches.append([word1.lemma + ":" + obj, sent.id] if obj else [word1.lemma, sent.id])
 
     # convert to lowercase
     matches = [[m1.lower(), m2] for [m1, m2] in matches]    
@@ -95,18 +102,23 @@ def get_event_patterns(annotation):
 
 
 def main():
-    # load all MUC articles (1700)
-    muc = load_muc()
-
-    # annotate with the stanza pipeline
-    muc = annotate(muc)    
-
-    # extract event patterns
-    tqdm.pandas(desc='Extracting event patterns')
-    muc['event_patterns'] = muc.progress_apply(lambda row: get_event_patterns(row['annotation']), axis=1)
+    muc_pickle_loc = ROOT + "\\processed_data\\muc_annotation.pkl"
     
-    # save to pickle (JSON will throw an overflow error)
-    muc.to_pickle(ROOT + "\\processed_data\\muc_annotation.pkl")
+    if exists(muc_pickle_loc):
+        print('Annotation file already created. No need to run this script again.')
+    else:
+        # 1) load all MUC articles (1700)-----
+        muc_data = load_muc()
+
+        # 2) annotate with the stanza pipeline-----
+        muc_data = annotate(muc_data)    
+
+        # 3) extract event patterns-----
+        tqdm.pandas(desc='Extracting event patterns')
+        muc_data['event_patterns'] = muc_data.progress_apply(lambda row: get_event_patterns(row['annotation']), axis=1)
+        
+        # 4) save to pickle (JSON will throw an overflow error)-----
+        muc_data.to_pickle(ROOT + "\\processed_data\\muc_annotation.pkl")
 
 if __name__ == "__main__":
     main()
