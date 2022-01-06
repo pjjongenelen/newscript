@@ -14,7 +14,13 @@ The authors describe a three-step process:
 The implementation of these steps is in [``` 1_template_topics.py ```](1_template_topics.py), [``` 2_build_corpus.py ```](2_build_corpus.py), [``` 3_template_slots.py ```](3_template_slots.py) respectively.
 
 ----
+### 0 - Annotation
+This file might as well be in preprocessing, but here it is.  
+It adds stanford pipeline information to the main MUC dataframe, and does the event pattern extraction.  
+All so that the next file can easily start with where it gets interesting!
 
+
+----
 ### 1 - Template topics
 
 There is a discrepancy between my implementation and the paper, namely that they state they have a maximum cluster

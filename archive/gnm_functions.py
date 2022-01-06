@@ -1,30 +1,26 @@
 """
-Most important general functions that are used in the template extraction process
+Old functions that consider the GNM dataset. Stored here in case I need the code later on. 
+No use in throwing it away now and having to reinvent the wheel next week.
 """
 
-from json import load
-import helpers
-import os
-import pandas as pd
+def joa_to_nguyen(input_path: str, output_path: str, number_of_files: int = 4):
+    df = []
 
-def load_muc(path = '\\srcNguyen\\muc-dev-tst1-4'):
-    path = os.getcwd() + path
+    for x in range(number_of_files):
+        with open(f"{input_path}/{x}.json", "r") as f:
+            df.append(json.load(f))
 
-    # load the muc data from the file we got from Nguyen
-    df = pd.read_csv(path, sep = '\t', names = ['muc_id', 'location'])
+    # flatten the list
+    text = [d['article_contentRaw'] for dump in df for d in dump]
+    # remove empty articles, encoding errors, and duplicate articles
+    text = [t.replace("\n", " ").encode('ascii', 'ignore').decode('ascii') for t in text if t != None]
+    text = set(text)
+    text_id = [f"joa{x}" for x in range(len(text))]
 
-    # split the second column
-    df = helpers.split_df_column(df, col1 = 'location', col2 = 'date', sep = ', ')
-    
-    # split the third column
-    # lines 1243 and 1246 do not have ' -- ' between the date and text, so let's insert that before the next split
-    for x in range(1243, 1246):
-        df.loc[x]['date'] = df.loc[x]['date'][:9] + " --" + df.loc[x]['date'][9:]
-    df = helpers.split_df_column(df, col1 = 'date', col2 = 'text', sep = ' -- ')
+    with open(output_path, "w") as f:
+        for i, t in zip(text_id, text):
+            f.write(i + "\t" + t + "\n")
 
-    return df
-
-load_muc()
 
 def load_gnm(data_path: str, cols: list, n = 776569) -> list:
     """Retrieves a specified number (n) of articles from the drugs database
