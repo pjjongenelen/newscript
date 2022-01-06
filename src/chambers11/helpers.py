@@ -92,7 +92,7 @@ def pdist(cdist_matrix):
         pdist_matrix = np.load(pdist_loc)
         print("Succesfully loaded pdist matrix")
     else:
-        print("Failed to load pdist matrix, creating new...")
+        print(f"Failed to find pdist matrix at {pdist_loc}, creating new...")
         # create empty matrix
         pdist_matrix = np.zeros(cdist_matrix.shape)
 
@@ -123,7 +123,7 @@ def print_clusters(cluster_labels: np.ndarray, events: list, counts: list) -> No
     df.sort_values(by='count', ignore_index=True, inplace=True)
 
     # for each cluster
-    for c in range(len(set(df['cluster']))):
+    for c in range(len(set(cluster_labels))):
         cluster_events = df['event'][df['cluster'] == c]
         print(f"Cluster {c} has size {len(cluster_events)}.")
         # if the cluster is large enough, print the 10 most frequent event patterns

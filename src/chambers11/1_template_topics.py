@@ -13,7 +13,7 @@ from tqdm import tqdm
 
 # set up:
 ROOT = "C:\\Users\\timjo\\PycharmProjects\\newscript"
-N_CLUS = 77  # number of document clusters, C&J use 77
+N_CLUS = 10  # number of document clusters, C&J use 77
 
 
 def make_cdist_matrix(df, ev_set):
@@ -33,7 +33,7 @@ def make_cdist_matrix(df, ev_set):
         cdist_matrix = np.load(cdist_loc)
         print("Succesfully loaded cdist matrix")
     else:
-        print("Failed to load cdist matrix, creating new...")        
+        print(f"Failed to find cdist matrix at {cdist_loc}, creating new...")        
         cdist_matrix = np.zeros([len(ev_set), len(ev_set)], dtype=np.float16)
         
         for _, d in tqdm(df.iterrows(), total=df.shape[0]):  # for all documents d
@@ -69,7 +69,7 @@ def make_pmi_matrix(p, pdist, ev_set):
         pmi_matrix = np.load(pmi_loc)
         print("Succesfully loaded pmi matrix")
     else:
-        print("Failed to load pmi matrix, creating new...")
+        print(f"Failed to find pmi matrix at {pmi_loc}, creating new...")
         # create empty matrix
         pmi_matrix = np.zeros([len(ev_set), len(ev_set)], dtype=np.float16)
 
