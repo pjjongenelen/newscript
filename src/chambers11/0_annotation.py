@@ -1,5 +1,9 @@
 """
-Annotates all MUC articles with a Stanza pipeline, also extracts event pattersn.
+Annotates all MUC articles with a Stanza pipeline and extracts event patterns:
+verbs, event nouns, or verb:object pairs
+
+Objects are NER tagged (if possible), and we only store lemmas.
+
 The resulting dataframe is saved to a pickle file.
 """
 
@@ -13,15 +17,16 @@ from tqdm import tqdm
 stanza.download(lang="en", processors="tokenize,pos,lemma,depparse", logging_level="WARN")
 PIPE = stanza.Pipeline(lang="en", processors="tokenize,mwt,pos,lemma,depparse", verbose=False)
 ROOT = 'C:\\Users\\timjo\\PycharmProjects\\newscript'
+NLP = en_core_web_sm.load()
 
 
-def load_muc() -> pd.DataFrame:
+def load_muc_csv() -> pd.DataFrame:
     """Loads MUC csv file and returns as dataframe"""
     df = pd.read_csv(ROOT + '\\processed_data\\muc.csv', index_col=0)
     return df
 
 
-def annotate(df) -> pd.DataFrame:
+def annotate(df: pd.DataFrame) -> pd.DataFrame:
     """Annotates each article with the Stanza pipeline."""
     # extract texts
     articles = df['text']
@@ -32,12 +37,10 @@ def annotate(df) -> pd.DataFrame:
         text = articles[index]
         annotations.append(PIPE(text))
 
-    # add annotations to df, and return
-    df['annotation'] = annotations
-    return df
+    return annotations
 
 
-def get_noun_patterns(annotation):
+def get_noun_patterns(annotation) -> list:
     """
     Extract event nouns based on the WorNet synsets
     """
@@ -54,25 +57,24 @@ def get_noun_patterns(annotation):
     return matches
 
 
-def get_verb_patterns(annotation):
+def get_verb_patterns(annotation, freq_verbs: list) -> list:
     """
     Extract verbs and their syntactic object head words
     """
 
     matches = []
-    nlp = en_core_web_sm.load()
 
     # extract verbs and their object head words (if they have one)
     for sent in annotation.sentences:
         for word1 in sent.words:
-            # find all verbs
-            if word1.upos == 'VERB':
+            # find all verbs - the most frequent ones
+            if word1.upos == 'VERB' and word1.lemma not in freq_verbs:
                 # look for a corresponding object
                 obj = None
                 for word2 in sent.words:
                     if 'obj' in word2.deprel and word2.head == word1.id:
                         # check for available NER tag
-                        ann = nlp(word2.text)
+                        ann = NLP(word2.text)
                         obj = ann.ents[0].label_ if len(ann.ents) > 0 else word2.lemma
                         break
 
@@ -85,7 +87,7 @@ def get_verb_patterns(annotation):
     return matches
 
 
-def get_event_patterns(annotation):
+def get_event_patterns(annotation, freq_verbs: list) -> list:
     """
     Extracts the two possible event pattern representations:
     1. event nouns based on the WordNet synsets
@@ -96,7 +98,7 @@ def get_event_patterns(annotation):
     ev_patterns = get_noun_patterns(annotation)
 
     # 2. verbs (+ head words / NER tags)
-    ev_patterns += get_verb_patterns(annotation)
+    ev_patterns += get_verb_patterns(annotation, freq_verbs)
 
     return ev_patterns
 
@@ -108,14 +110,15 @@ def main():
         print('Annotation file already created. No need to run this script again.')
     else:
         # 1) load all MUC articles (1700)-----
-        muc_data = load_muc()
+        muc_data = load_muc_csv()
 
         # 2) annotate with the stanza pipeline-----
-        muc_data = annotate(muc_data)    
+        muc_data['annotation'] = annotate(muc_data)    
 
         # 3) extract event patterns-----
+        freq_verbs = helpers.get_freq_verbs(muc_data, threshold = 0.3)
         tqdm.pandas(desc='Extracting event patterns')
-        muc_data['event_patterns'] = muc_data.progress_apply(lambda row: get_event_patterns(row['annotation']), axis=1)
+        muc_data['event_patterns'] = muc_data.progress_apply(lambda row: get_event_patterns(row['annotation'], freq_verbs), axis=1)
         
         # 4) save to pickle (JSON will throw an overflow error)-----
         muc_data.to_pickle(ROOT + "\\processed_data\\muc_annotation.pkl")

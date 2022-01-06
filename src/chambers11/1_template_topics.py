@@ -1,5 +1,5 @@
 """
-Approximate the domain template topics.
+Approximate the domain template topics by clustering events patterns based on distance.
 """
 
 import helpers as h
@@ -7,13 +7,14 @@ from itertools import permutations
 import math
 import numpy as np
 from os.path import exists
+import pandas as pd
 from sklearn.cluster import AgglomerativeClustering
 from tqdm import tqdm
 
 
 # set up:
 ROOT = "C:\\Users\\timjo\\PycharmProjects\\newscript"
-N_CLUS = 10  # number of document clusters, C&J use 77
+N_CLUS = 77  # number of document clusters, C&J use 77
 
 
 def make_cdist_matrix(df, ev_set):
@@ -102,7 +103,9 @@ def main():
     print(f'number of clusters = {N_CLUS}, size of largest cluster: {max(np.bincount(clustering.labels_))}')
 
     # 6) print to allow manual identification of clusters-----
-    h.print_clusters(clustering.labels_, event_set, event_counts)
+    ep_cluster_mapping = pd.DataFrame({'cluster': clustering.labels_, 'event': event_set})
+    h.save_to_dict(ep_cluster_mapping, loc = ROOT + '/src/chambers11/matrices/event_cluster_dict.json')
+    h.print_clusters(ep_cluster_mapping, event_counts)
     
 
 if __name__ == "__main__":

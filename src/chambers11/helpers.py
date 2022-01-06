@@ -2,8 +2,8 @@
 Simple code snippets that make the 1_, 2_, and 3_ files more readable
 """
 
+import json
 import numpy as np
-import en_core_web_sm
 from nltk.corpus import wordnet
 from os.path import exists
 import pandas as pd
@@ -28,7 +28,27 @@ def load_muc(amount=0) -> pd.DataFrame:
     return df
 
 
-def get_event_nouns():
+def get_freq_verbs(df: pd.DataFrame, threshold: float) -> list:
+    """
+    Builds a list of verbs that occur in more of the documents than a certain threshold
+    """
+    doc_verbs = []
+    annotations = df['annotation']
+    for ann in annotations:
+        dv = []
+        for sent in ann.sentences:
+            for word in sent.words:
+                if word.upos == 'VERB':
+                    dv.append(word.lemma)
+        doc_verbs.append(list(set(dv)))
+    
+    # flatten list and get value counts
+    doc_verbs = pd.Series([verb for doc in doc_verbs for verb in doc]).value_counts()
+    freq_verbs = doc_verbs[doc_verbs.values > (1700 * threshold)].index
+    return freq_verbs
+
+
+def get_event_nouns() -> list:
     """
     Defines a list of event nouns based on the two WordNet synsets used by Chambers & Jurafsky
     """
@@ -41,7 +61,7 @@ def get_event_nouns():
     return list(set(event_nouns))
 
 
-def make_events_set(df):
+def make_events_set(df) -> list:
     """
     Create sorted list of the set of events in order to look up indices in matrices later on
     """
@@ -55,7 +75,7 @@ def make_events_set(df):
     return ev_set, ev_counts
 
 
-def prob(df):
+def prob(df) -> dict:
     """
     Create a dict of event count probabilities following the formula on page 979
     p(wi) = c(wi) / sum( c(wj) )
@@ -76,7 +96,7 @@ def prob(df):
     return dict(zip(event_counts['event'], event_counts['prob']))
 
 
-def pdist(cdist_matrix):
+def pdist(cdist_matrix) -> np.ndarray:
     """
     Calculates pdist values given the cdist matrix based on the formula on page 979
     pdist(wi, wj) = cdist(wi, wj) / ( sum_all_cdist(wk, wl) )
@@ -113,20 +133,33 @@ def pdist(cdist_matrix):
     return pdist_matrix
 
 
-def print_clusters(cluster_labels: np.ndarray, events: list, counts: list) -> None:
+def print_clusters(df: pd.DataFrame, counts: list) -> None:
     """
     Prints the 10 most frequent (on a corpus level) event patterns for each cluster
     """
-    
-    # transform to df for easier processing
-    df = pd.DataFrame({'cluster': cluster_labels, 'event': events, 'count': counts})
+
+    df['count'] = counts
     df.sort_values(by='count', ignore_index=True, inplace=True)
 
     # for each cluster
-    for c in range(len(set(cluster_labels))):
+    for c in range(len(set(df['cluster']))):
         cluster_events = df['event'][df['cluster'] == c]
         print(f"Cluster {c} has size {len(cluster_events)}.")
         # if the cluster is large enough, print the 10 most frequent event patterns
         amount = min(len(cluster_events), 10)        
         print(f"Contains: {'  -  '.join([ev for ev in cluster_events][:amount])}")
         print("______________________________________________________________________________")
+
+
+def save_to_dict(cluster_events_df: pd.DataFrame, loc: str) -> None:
+    cluster_events_dict = dict()
+    for e, c in zip(cluster_events_df['event'], cluster_events_df['cluster']):
+        cluster_events_dict[e] = c
+    
+    with open(loc, 'w+') as f:
+        json.dump(cluster_events_dict, f)
+
+
+def cos_sim(a, b):
+    """Calculates the cosine similarity between two vectors"""
+    return np.dot(a, b)/(np.linalg.norm(a)*np.linalg.norm(b))
