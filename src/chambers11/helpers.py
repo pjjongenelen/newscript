@@ -3,10 +3,12 @@ Simple code snippets that make the 1_, 2_, and 3_ files more readable
 """
 
 import json
+from re import VERBOSE
 import numpy as np
 from nltk.corpus import wordnet
-from os.path import exists
+import os
 import pandas as pd
+from stanza.server import CoreNLPClient
 from tqdm import tqdm
 
 # set up:
@@ -49,8 +51,9 @@ def get_freq_verbs(df: pd.DataFrame, threshold: float) -> list:
 
 
 def get_event_nouns() -> list:
-    """
-    Defines a list of event nouns based on the two WordNet synsets used by Chambers & Jurafsky
+    """Defines event nouns based on WordNet event.n.01 and act.n.02
+
+    :returns: event noun set as list
     """
 
     n01 = wordnet.synset("event.n.01").closure(lambda s: s.hyponyms())
@@ -107,7 +110,7 @@ def pdist(cdist_matrix) -> np.ndarray:
 
     pdist_loc = ROOT + "/src/chambers11/matrices/muc_pdist_matrix.npy"
 
-    if exists(pdist_loc):
+    if os.path.exists(pdist_loc):
         # load and return
         pdist_matrix = np.load(pdist_loc)
         print("Succesfully loaded pdist matrix")
@@ -158,6 +161,21 @@ def save_to_dict(cluster_events_df: pd.DataFrame, loc: str) -> None:
     
     with open(loc, 'w+') as f:
         json.dump(cluster_events_dict, f)
+
+
+def get_corefering_entities(annotation) -> list:
+    """Transforms the CoreNLP coreference chains into a more usable list-of-lists format"""
+    
+    # TODO: implement
+
+    return "Not implemented yet, so you got some work to do!"
+
+def get_sub_obj(event_patterns) -> list:
+    """Extracts all subjects and objects included in the event patterns"""
+
+    # TODO: implement
+
+    return "Not implemented yet, so you got some work to do!"
 
 
 def cos_sim(a, b):
