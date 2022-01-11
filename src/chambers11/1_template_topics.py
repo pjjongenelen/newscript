@@ -104,7 +104,7 @@ def main():
 
     # 6) print to allow manual identification of clusters-----
     ep_cluster_mapping = pd.DataFrame({'cluster': clustering.labels_, 'event': event_set})
-    h.save_to_dict(ep_cluster_mapping, loc = ROOT + '/src/chambers11/matrices/event_cluster_dict.json')
+    h.save_to_dict(ep_cluster_mapping['event'], ep_cluster_mapping['cluster'], loc = ROOT + '/src/chambers11/matrices/event_cluster_dict.json')
     h.print_clusters(ep_cluster_mapping, event_counts)
     
 

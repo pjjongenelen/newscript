@@ -152,21 +152,14 @@ def print_clusters(df: pd.DataFrame, counts: list) -> None:
         print("______________________________________________________________________________")
 
 
-def save_to_dict(cluster_events_df: pd.DataFrame, loc: str) -> None:
+def save_to_dict(col1, col2, loc: str) -> None:
     cluster_events_dict = dict()
-    for e, c in zip(cluster_events_df['event'], cluster_events_df['cluster']):
+    for e, c in zip(col1, col2):
         cluster_events_dict[e] = c
     
     with open(loc, 'w+') as f:
         json.dump(cluster_events_dict, f)
 
-
-def get_corefering_entities(annotation) -> list:
-    """Transforms the CoreNLP coreference chains into a more usable list-of-lists format"""
-    
-    # TODO: implement
-
-    return "Not implemented yet, so you got some work to do!"
 
 def get_sub_obj(event_patterns: dict) -> list:
     """Extracts all subjects and objects included in the event patterns
@@ -186,5 +179,10 @@ def get_sub_obj(event_patterns: dict) -> list:
 
 
 def cos_sim(a, b):
-    """Calculates the cosine similarity between two vectors"""
-    return np.dot(a, b)/(np.linalg.norm(a)*np.linalg.norm(b))
+    """Calculates the cosine similarity between two vectors.
+    Except when one of the vectors is all zeros, then it returns None"""
+
+    if sum(a) == 0 or sum(b) == 0:
+        return None
+    else:
+        return np.dot(a, b)/(np.linalg.norm(a)*np.linalg.norm(b))

@@ -1,13 +1,25 @@
 """
 Induces template slots from clusters of documents
+
+Backlog:
+1) ---
+Extract event nouns for event patterns
+
+2) ---
+Take coreference chains into account. Introduces a transitive property in the subject/object relation between event patterns and entities.
+This means updating the argument matrix such that all columns for corefering entities are equal to the sum of their parts.
+Requires switching to the (less interpreatble) location representation of subjects and objects instead of their lemmas.
 """
 
 import helpers as h
+from itertools import permutations
 import numpy as np
 import os
 import pandas as pd
+from sklearn.cluster import AgglomerativeClustering
 from stanza.server import CoreNLPClient
 
+N_CLUS = 5
 ROOT = 'C:\\Users\\timjo\\PycharmProjects\\newscript'
 
 
@@ -91,6 +103,7 @@ def extract_event_patterns(annotations):
                                 lemma = sub_obj_token.lemma
                             else:
                                 lemma = sub_obj_token.coarseNER
+                            lemma = lemma.lower()
 
                             # get location info
                             loc = [doc_id, sent_id, e.target - 1]  # e.target index starts at 1
@@ -110,52 +123,120 @@ def extract_event_patterns(annotations):
     return event_patterns
 
 
-def fill_arg_matrix(arg_mat: np.ndarray, ev_patterns: dict, ents: list) -> np.ndarray:
-    """Loops over all event pattern objects, and annotates """
-    pass
+def create_arg_matrix(ev_patterns: dict, ents: list, evps: list) -> np.ndarray:
+    """Creates the argument matrix based on the information in ev_patterns
+    
+    :param ev_patterns: dictionary of event pattern objects
+    :param ents: list of entities that serves as index for the columns
+    :param evps: list of event patterns that serves as index for the rows
+
+    :returns: filled argument matrix
+    """
+
+    # create empty argument matrix
+    arg_matrix = np.zeros([len(ev_patterns)*2, len(ents)])
+
+    # extract all subjects and objects of all event patterns, and annotate the argument matrix accordingly
+    for ep_sub_index in range(len(evps)):
+        pattern = ev_patterns[evps[ep_sub_index]]
+        ep_obj_index = ep_sub_index + len(evps)
+
+        subjects = pattern.sub_lemmas
+        objects = pattern.obj_lemmas
+        
+        if len(subjects) > 0:
+            for sub in subjects:
+                col_index = ents.index(sub)
+                arg_matrix[ep_sub_index, col_index] = 1
+
+        if len(objects) > 0:
+            for obj in objects:
+                col_index = ents.index(obj)
+                arg_matrix[ep_obj_index, col_index] = 1
+
+    return arg_matrix
 
 
-def add_coref(arg_mat: np.ndarray, coref_chains: list) -> np.ndarray:
-    """Sets columns in the argument matrix equal to their sum for all entities per coreference chain"""
-
-    # Backlog, because coref information comes from the CoreNLPClient, 
-    # whereas our annotations (with deprel) comes from the neural pipeline
-
-    return "Not implemented yet."
-
-def fill_coreference_matrix(coref_mat: np.ndarray, arg_mat: np.ndarray) -> np.ndarray:
+def create_coreference_matrix(arg_mat: np.ndarray, evps: list) -> np.ndarray:
     """Creates a matrix containing information relating to corefering arguments (C&J, pp. 980)
 
     Each row in the matrix will contain an event pattern as subject and/or object.
     Information is one-hot encoded to show with which other event patterns it corefers in this cluster of documents
     Note that we use one-hot encoding instead of count-based information. This is the way we interpreted "relation counts" on page 980.
 
-    :param coref_mat: empty coreference matrix
-    :param arg_mat: 
+    :param arg_mat: filled argument matrix
+    :param evps: event pattern index list 
 
     :returns: filled coreference matrix
     """
 
-    # TODO: implement
+    # create empty coreference matrix
+    coref_mat = np.zeros([len(evps), len(evps)])
 
-    return "Not implemented yet, so you got some work to do!"
+    # iterate over all entities
+    for col in range(arg_mat.shape[1]):
+        # find all ev_patterns that corefer with this entity
+        col_evps = list(np.argwhere(arg_mat[:,col] > 0))
+        
+        # if there are corefering event patterns, update the coref_matrix
+        if len(col_evps) > 1:
+            for i1, i2 in permutations(col_evps, r=2):
+                coref_mat[i1, i2] = 1
+
+    return coref_mat
 
 
-class template:
-    """This class should hold information on each of the templates. Most notably their slots.
-    Haven't thought a lot about this yet, as it is far in the future, but it seems like templates should be a class"""
+def create_similarity_matrix(coref_mat: np.ndarray, selpref_mat: np.ndarray):
+    """Calculates the cosine similarity scores for each pair of event patterns, based on the rule on page 980:
+    
+    similarity = {  max(cos_sim(coref), cos_sim(selpref))  --  if max(...) >= 0.7    }
+                 {  avg(cos_sim(coref), cos_sim(selpref))  --  if max(...) <  0.7    }
+                 {  cos_sim(coref) OR cos_sim(selpref)     --  if one doesn't exist  }*  
+    
+    *because we removed empty lines from the matrices for convenience, there might be differences in the coref and selpref lists of event patterns
 
-    def __init__(self):
-        # TODO: implement
-        pass
+    :param coref_mat: one-hot encoded coreference matrix (which evps have corefering arguments with which other evps) 
+    :param selpref_mat: one-hot encoded selectional preferences matrix (which evps refer to which entities)
+    
+    :returns: single similarity matrix that contains the measure of similarity between event patterns as defined above
 
+    Good to know: 
+    - coref_mat.shape[0] == coref_mat.shape[1]  == selpref_mat.shape[0]
+    - selpref_mat.shape[1] == number of entities (ergo: len(set) of all subjects and objects of extracted event patterns)
+    """
 
-def cluster(coref_mat: np.ndarray):
-    """Is a custom agglomerative clustering algorithm that takes into account the constraints the authors mention"""
+    # create empty similarity matrix of size: amount_of_event_patterns ** 2
+    sim_matrix = np.zeros(coref_mat.shape)
 
-    # TODO: implement
+    for i1 in range(coref_mat.shape[0]):
+        for i2 in range(coref_mat.shape[0]):
+            if i1 != i2 and abs(i1 - i2) == (coref_mat.shape[0] / 2):
+                # implement constraint 1 of the clustering: evp:s and evp:o cannot be in the same cluster
+                # we do this by setting their similarity score to 0
+                sim_matrix[i1, i2] = 0
+            elif i1 != i2:
+                # cos_sim calculates cosine similarity if both rows have data, else it returns None
+                coref_sim = h.cos_sim(coref_mat[i1,:], coref_mat[i2,:])
+                selpref_sim = h.cos_sim(selpref_mat[i1,:], selpref_mat[i2,:])
+                
+                # determine case based on whether or not we found empty rows
+                if coref_sim and selpref_sim:
+                    # no empty rows, normal case
+                    max_sim = max(coref_sim, selpref_sim)
+                    if max_sim < 0.7:
+                        # if we're confident, take the maximum of the two
+                        sim_matrix[i1, i2] = max_sim
+                    else:
+                        # else, take the averagee
+                        sim_matrix[i1, i2] = (coref_sim + selpref_sim) / 2
+                elif coref_sim:
+                    # if only coref information
+                    sim_matrix[i1, i2] = coref_sim
+                elif selpref_sim:
+                    # if only selpref information
+                    sim_matrix[i1, i2] = selpref_sim
 
-    return "Not implemented yet, so you got some work to do!"
+    return sim_matrix
 
 
 def main():
@@ -168,34 +249,26 @@ def main():
     # use annotations to extract event patterns
     event_patterns = extract_event_patterns(dev_muc['annotations'].tolist())
 
-    # for each document, transform the coreference chain into a more usable format
-    # TODO: implement
-    # corefering_entities = h.get_corefering_entities(dev_muc['annotations'])
-
-    # get list of all subjects and objects to serve as the column indices of the argument matrix
-    entities = h.get_sub_obj(event_patterns)
-    print(entities)
+    # get list of all event patterns, subjects, and objects to serve as the indices of the matrices
+    evp_index = sorted(list(event_patterns.keys()))
+    ent_index = h.get_sub_obj(event_patterns)
 
     # make the matrix that shows argument relations between event patterns and entities
-    # TODO: implement
-    argument_matrix = np.zeros([len(event_patterns)*2, len(entities)])
-    argument_matrix = fill_arg_matrix(argument_matrix, event_patterns, entities)
+    # ? for a visual example of the argument matrix see res/argument_matrix.md
+    selpref_matrix = create_arg_matrix(event_patterns, ent_index, evp_index)
+    
+    # update event pattern index list (each event pattern is considered as both subject and object)
+    evp_index = [ep + ':s' for ep in evp_index] + [ep + ':o' for ep in evp_index]
 
-    # use the information on corefering entities to update the argument matrix
-    # TODO: implement
-    # ? I'm not sure if this improves the model
-    # argument_matrix = add_coref(argument_matrix)#, corefering_entities)
+    # use the argument matrix to create an event pattern coreference matrix
+    coreference_matrix = create_coreference_matrix(selpref_matrix, evp_index) 
 
-    # use the argument matrix to create a event pattern coreference matrix
-    # TODO: implement
-    # coreference_matrix = np.zeros([len(event_patterns)*2, len(event_patterns)*2])
-    # coreference_matrix = fill_coreference_matrix(coreference_matrix, argument_matrix) 
+    # similarity matrix
+    similarity_matrix = create_similarity_matrix(coreference_matrix, selpref_matrix)
 
-    # cluster the coreference vectors, which are the rows of the coreference matrix 
-    # TODO: implement
-    # ! requires manual creation of clustering algorithm, due to the authors' two constraints
-    # templates = cluster(coreference_matrix)
-
+    # cluster the similarity matrix
+    clustering = AgglomerativeClustering(n_clusters = N_CLUS, affinity = 'precomputed', linkage = 'average').fit(similarity_matrix)
+    h.save_to_dict(evp_index, clustering.labels_, loc = ROOT + '/src/chambers11/matrices/ep_slot_dict.json')
 
 if __name__ == "__main__":
     main()
