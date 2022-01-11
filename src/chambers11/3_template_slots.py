@@ -18,6 +18,7 @@ import os
 import pandas as pd
 from sklearn.cluster import AgglomerativeClustering
 from stanza.server import CoreNLPClient
+from tqdm import tqdm
 
 N_CLUS = 5
 ROOT = 'C:\\Users\\timjo\\PycharmProjects\\newscript'
@@ -32,7 +33,11 @@ def annotate_corenlp(documents: list) -> list:
     
     # annotate
     with CoreNLPClient(endpoint='http://localhost:8000', timeout=30000, memory='4G', be_quiet=True) as client:
-        annotations = [client.annotate(doc) for doc in documents]
+        annotations = []
+        print('Annotating documents')
+        for x in tqdm(range(len(documents))):
+            doc = documents[x]
+            client.annotate(doc)
     
     # remove pesky .props files
     files = os.listdir(os.getcwd())
@@ -66,7 +71,7 @@ class event_pattern:
         self.obj_lemmas.append(lemma)
 
 
-def extract_event_patterns(annotations):
+def extract_event_patterns(annotations: list) -> dict:
     """Use CoreNLP annotation to extract event patterns
 
     Chambers & Jurafsky (pp. 978) define event patterns as either:
@@ -76,12 +81,14 @@ def extract_event_patterns(annotations):
     
     :param annotations: list of CoreNLPClient annotations of documents
 
-    :returns: list of event_pattern class instances
+    :returns: dictionary of event_pattern class instances
     """
 
     # 1) find verbs and their arguments
     event_patterns = {}
-    for ann in annotations:
+    print('Extracting event patterns')
+    for ann_index in tqdm(range(len(annotations))):
+        ann = annotations[ann_index]
         doc_id = annotations.index(ann)
 
         for sent in ann.sentence:
@@ -137,7 +144,8 @@ def create_arg_matrix(ev_patterns: dict, ents: list, evps: list) -> np.ndarray:
     arg_matrix = np.zeros([len(ev_patterns)*2, len(ents)])
 
     # extract all subjects and objects of all event patterns, and annotate the argument matrix accordingly
-    for ep_sub_index in range(len(evps)):
+    print('Extracting subjects and objects for event patterns')
+    for ep_sub_index in tqdm(range(len(evps))):
         pattern = ev_patterns[evps[ep_sub_index]]
         ep_obj_index = ep_sub_index + len(evps)
 
@@ -174,7 +182,8 @@ def create_coreference_matrix(arg_mat: np.ndarray, evps: list) -> np.ndarray:
     coref_mat = np.zeros([len(evps), len(evps)])
 
     # iterate over all entities
-    for col in range(arg_mat.shape[1]):
+    print('Creating coreference matrix from selectional preference matrix, column-by-column')
+    for col in tqdm(range(arg_mat.shape[1])):
         # find all ev_patterns that corefer with this entity
         col_evps = list(np.argwhere(arg_mat[:,col] > 0))
         
@@ -186,7 +195,7 @@ def create_coreference_matrix(arg_mat: np.ndarray, evps: list) -> np.ndarray:
     return coref_mat
 
 
-def create_similarity_matrix(coref_mat: np.ndarray, selpref_mat: np.ndarray):
+def create_similarity_matrix(coref_mat: np.ndarray, selpref_mat: np.ndarray, evp_i: list):
     """Calculates the cosine similarity scores for each pair of event patterns, based on the rule on page 980:
     
     similarity = {  max(cos_sim(coref), cos_sim(selpref))  --  if max(...) >= 0.7    }
@@ -197,6 +206,7 @@ def create_similarity_matrix(coref_mat: np.ndarray, selpref_mat: np.ndarray):
 
     :param coref_mat: one-hot encoded coreference matrix (which evps have corefering arguments with which other evps) 
     :param selpref_mat: one-hot encoded selectional preferences matrix (which evps refer to which entities)
+    :param evp_i: event pattern index list for indexing the matrices
     
     :returns: single similarity matrix that contains the measure of similarity between event patterns as defined above
 
@@ -205,15 +215,27 @@ def create_similarity_matrix(coref_mat: np.ndarray, selpref_mat: np.ndarray):
     - selpref_mat.shape[1] == number of entities (ergo: len(set) of all subjects and objects of extracted event patterns)
     """
 
-    # create empty similarity matrix of size: amount_of_event_patterns ** 2
+    # remove rows from both matrices if we have no information
+    print(coref_mat.shape, selpref_mat.shape, len(evp_i))
+    to_remove = [x for x in range(len(evp_i)) if sum(coref_mat[x,:]) == 0 and sum(selpref_mat[x,:]) == 0]
+    coref_mat = np.delete(coref_mat, to_remove, 0)
+    coref_mat = np.delete(coref_mat, to_remove, 1)
+    selpref_mat = np.delete(selpref_mat, to_remove, 0)
+    to_remove.sort(reverse = True)
+    for tr in to_remove:
+        # start from the back so that the removed elements do not mess up the indices
+        del evp_i[tr]
+    print(coref_mat.shape, selpref_mat.shape, len(evp_i))
+
+
+    # create empty similarity matrix
     sim_matrix = np.zeros(coref_mat.shape)
 
-    for i1 in range(coref_mat.shape[0]):
+    for i1 in tqdm(range(coref_mat.shape[0])):
         for i2 in range(coref_mat.shape[0]):
-            if i1 != i2 and abs(i1 - i2) == (coref_mat.shape[0] / 2):
-                # implement constraint 1 of the clustering: evp:s and evp:o cannot be in the same cluster
-                # we do this by setting their similarity score to 0
-                sim_matrix[i1, i2] = 0
+            if evp_i[i1][0:len(evp_i[i1]) - 2] == evp_i[i2][0:len(evp_i[i2]) - 2]:
+                # clustering constraint 1: prevent sub and obj of same ep from being in the same cluster
+                sim_matrix[i1, i2] = -10
             elif i1 != i2:
                 # cos_sim calculates cosine similarity if both rows have data, else it returns None
                 coref_sim = h.cos_sim(coref_mat[i1,:], coref_mat[i2,:])
@@ -240,14 +262,14 @@ def create_similarity_matrix(coref_mat: np.ndarray, selpref_mat: np.ndarray):
 
 
 def main():
-    # load sample documents
-    dev_muc = pd.read_pickle(ROOT + '/src/chambers11/matrices/dev_dummy.pkl')  # ! this is just a dummy data file of 10 MUC documents
+    # load documents
+    df = pd.read_pickle(ROOT + '/src/chambers11/matrices/gnm_xtclab.pkl')[:400]
 
     # annotate documents with CoreNLPClient
-    dev_muc['annotations'] = annotate_corenlp(dev_muc['text'])
+    df['annotations'] = annotate_corenlp(df['text'])
 
     # use annotations to extract event patterns
-    event_patterns = extract_event_patterns(dev_muc['annotations'].tolist())
+    event_patterns = extract_event_patterns(df['annotations'].tolist())
 
     # get list of all event patterns, subjects, and objects to serve as the indices of the matrices
     evp_index = sorted(list(event_patterns.keys()))
@@ -264,11 +286,13 @@ def main():
     coreference_matrix = create_coreference_matrix(selpref_matrix, evp_index) 
 
     # similarity matrix
-    similarity_matrix = create_similarity_matrix(coreference_matrix, selpref_matrix)
+    similarity_matrix = create_similarity_matrix(coreference_matrix, selpref_matrix, evp_index)
 
     # cluster the similarity matrix
     clustering = AgglomerativeClustering(n_clusters = N_CLUS, affinity = 'precomputed', linkage = 'average').fit(similarity_matrix)
-    h.save_to_dict(evp_index, clustering.labels_, loc = ROOT + '/src/chambers11/matrices/ep_slot_dict.json')
+    slot_mapping = pd.DataFrame({'slot': clustering.labels_, 'event': evp_index})
+    pd.to_pickle(slot_mapping, ROOT + '/src/chambers11/matrices/slot_mapping.pkl')
+
 
 if __name__ == "__main__":
     main()
