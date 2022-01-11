@@ -3,12 +3,10 @@ Simple code snippets that make the 1_, 2_, and 3_ files more readable
 """
 
 import json
-from re import VERBOSE
 import numpy as np
 from nltk.corpus import wordnet
 import os
 import pandas as pd
-from stanza.server import CoreNLPClient
 from tqdm import tqdm
 
 # set up:
@@ -170,12 +168,21 @@ def get_corefering_entities(annotation) -> list:
 
     return "Not implemented yet, so you got some work to do!"
 
-def get_sub_obj(event_patterns) -> list:
-    """Extracts all subjects and objects included in the event patterns"""
+def get_sub_obj(event_patterns: dict) -> list:
+    """Extracts all subjects and objects included in the event patterns
+    This information is necessary to know how many columns the argument matrix should have,
+    and it will also serve as an index of these columns
+    
+    :param event_patterns: dictionary of all event pattern objects from the corpus
 
-    # TODO: implement
+    :returns: sorted list of all subject and object lemmas
 
-    return "Not implemented yet, so you got some work to do!"
+    """
+
+    subjects = [sub_lem.lower() for value in event_patterns.values() for sub_lem in value.sub_lemmas]
+    objects = [obj_lem.lower() for value in event_patterns.values() for obj_lem in value.obj_lemmas]
+
+    return sorted(list(set(subjects + objects)))
 
 
 def cos_sim(a, b):
