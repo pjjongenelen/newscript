@@ -20,6 +20,7 @@ from sklearn.cluster import AgglomerativeClustering
 from stanza.server import CoreNLPClient
 from tqdm import tqdm
 
+
 N_CLUS = 5
 ROOT = 'C:\\Users\\timjo\\PycharmProjects\\newscript'
 
@@ -32,12 +33,12 @@ def annotate_corenlp(documents: list) -> list:
     """
     
     # annotate
-    with CoreNLPClient(endpoint='http://localhost:8000', timeout=30000, memory='4G', be_quiet=True) as client:
+    with CoreNLPClient(endpoint='http://localhost:8000', timeout=100000000, memory='4G', be_quiet=True) as client:
         annotations = []
         print('Annotating documents')
         for x in tqdm(range(len(documents))):
             doc = documents[x]
-            client.annotate(doc)
+            annotations.append(client.annotate(doc))
     
     # remove pesky .props files
     files = os.listdir(os.getcwd())
@@ -216,7 +217,6 @@ def create_similarity_matrix(coref_mat: np.ndarray, selpref_mat: np.ndarray, evp
     """
 
     # remove rows from both matrices if we have no information
-    print(coref_mat.shape, selpref_mat.shape, len(evp_i))
     to_remove = [x for x in range(len(evp_i)) if sum(coref_mat[x,:]) == 0 and sum(selpref_mat[x,:]) == 0]
     coref_mat = np.delete(coref_mat, to_remove, 0)
     coref_mat = np.delete(coref_mat, to_remove, 1)
@@ -225,12 +225,12 @@ def create_similarity_matrix(coref_mat: np.ndarray, selpref_mat: np.ndarray, evp
     for tr in to_remove:
         # start from the back so that the removed elements do not mess up the indices
         del evp_i[tr]
-    print(coref_mat.shape, selpref_mat.shape, len(evp_i))
 
 
     # create empty similarity matrix
     sim_matrix = np.zeros(coref_mat.shape)
 
+    print('Creating similarity matrix')
     for i1 in tqdm(range(coref_mat.shape[0])):
         for i2 in range(coref_mat.shape[0]):
             if evp_i[i1][0:len(evp_i[i1]) - 2] == evp_i[i2][0:len(evp_i[i2]) - 2]:
@@ -263,7 +263,7 @@ def create_similarity_matrix(coref_mat: np.ndarray, selpref_mat: np.ndarray, evp
 
 def main():
     # load documents
-    df = pd.read_pickle(ROOT + '/src/chambers11/matrices/gnm_xtclab.pkl')[:400]
+    df = pd.read_pickle(ROOT + '/src/chambers11/matrices/gnm_xtclab.pkl')[:200]
 
     # annotate documents with CoreNLPClient
     df['annotations'] = annotate_corenlp(df['text'])
@@ -287,6 +287,7 @@ def main():
 
     # similarity matrix
     similarity_matrix = create_similarity_matrix(coreference_matrix, selpref_matrix, evp_index)
+    np.save(ROOT + "/src/chambers11/matrices/similarity.npy", similarity_matrix)
 
     # cluster the similarity matrix
     clustering = AgglomerativeClustering(n_clusters = N_CLUS, affinity = 'precomputed', linkage = 'average').fit(similarity_matrix)

@@ -2,6 +2,7 @@ The following table gives an example of what the argument matrix looks like:
 - The columns represent all entities that are found as either subjects or objects in the corpus
 - The rows are all event patterns, represented twice. Once as a subject and once as an object relation
 
+
 A 1 in a cell indicates that entity_x served as either the __:subj or __:obj of ev_patternX.  
 
 
