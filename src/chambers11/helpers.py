@@ -44,7 +44,7 @@ def get_freq_verbs(df: pd.DataFrame, threshold: float) -> list:
     
     # flatten list and get value counts
     doc_verbs = pd.Series([verb for doc in doc_verbs for verb in doc]).value_counts()
-    freq_verbs = doc_verbs[doc_verbs.values > (1700 * threshold)].index
+    freq_verbs = doc_verbs[doc_verbs.values > (df.shape[0] * threshold)].index
     return freq_verbs
 
 

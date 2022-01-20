@@ -20,12 +20,6 @@ ROOT = 'C:\\Users\\timjo\\PycharmProjects\\newscript'
 NLP = en_core_web_sm.load()
 
 
-def load_muc_csv() -> pd.DataFrame:
-    """Loads MUC csv file and returns as dataframe"""
-    df = pd.read_csv(ROOT + '\\processed_data\\muc.csv', index_col=0)
-    return df
-
-
 def annotate(df: pd.DataFrame) -> pd.DataFrame:
     """Annotates each article with the Stanza pipeline."""
     # extract texts
@@ -33,7 +27,7 @@ def annotate(df: pd.DataFrame) -> pd.DataFrame:
 
     # for loop so we can use tqdm
     annotations = []
-    for index in tqdm(range(len(articles)), desc="Annotation of MUC articles"):
+    for index in tqdm(range(len(articles)), desc="Annotating articles"):
         text = articles[index]
         annotations.append(PIPE(text))
 
@@ -104,24 +98,26 @@ def get_event_patterns(annotation, freq_verbs: list) -> list:
 
 
 def main():
-    muc_pickle_loc = ROOT + "\\processed_data\\muc_annotation.pkl"
+    source = "gnm"
+    pickle_loc = f"{ROOT}\\processed_data\\{source}_annotation.pkl"
     
-    if exists(muc_pickle_loc):
+    if exists(pickle_loc):
         print('Annotation file already created. No need to run this script again.')
+
     else:
-        # 1) load all MUC articles (1700)-----
-        muc_data = load_muc_csv()
+        # 1) load all 1700 articles-----
+        df = pd.read_csv(f'{ROOT}\\processed_data\\{source}.csv', index_col=0)
 
         # 2) annotate with the stanza pipeline-----
-        muc_data['annotation'] = annotate(muc_data)    
+        df['annotation'] = annotate(df)    
 
         # 3) extract event patterns-----
-        freq_verbs = helpers.get_freq_verbs(muc_data, threshold = 0.3)
+        freq_verbs = helpers.get_freq_verbs(df, threshold = 0.3)
         tqdm.pandas(desc='Extracting event patterns')
-        muc_data['event_patterns'] = muc_data.progress_apply(lambda row: get_event_patterns(row['annotation'], freq_verbs), axis=1)
+        df['event_patterns'] = df.progress_apply(lambda row: get_event_patterns(row['annotation'], freq_verbs), axis=1)
         
         # 4) save to pickle (JSON will throw an overflow error)-----
-        muc_data.to_pickle(ROOT + "\\processed_data\\muc_annotation.pkl")
+        df.to_pickle(f"{ROOT}\\processed_data\\{source}_annotation.pkl")
 
 if __name__ == "__main__":
     main()

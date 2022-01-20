@@ -21,7 +21,7 @@ for x in tqdm(range(1572)):
             df = df.append(other=art)
             
 # rename columns
-df = df.rename(columns = {'article_contentRaw': 'text', 'article_domain': 'origin', 'article_author': 'author', 'gdelt_ActionGeo_CountryCode': 'country'})
+df = df.rename(columns = {'article_contentRaw': 'text', 'article_domain': 'origin', 'article_author': 'author', 'gdelt_ActionGeo_CountryCode': 'location'})
 
 # convert int date to correct format            
 df['date'] = [get_date(dat) for dat in df['date'].tolist()]
@@ -49,5 +49,10 @@ for auth in df['author']:
 df['author'] = auths
 
 
-df.reset_index(drop=True)
-df.to_pickle(f"{ROOT}\\processed_data\\gnm.pkl")
+df = df.reset_index(drop=True)
+
+# draw a sample 
+sample = df.sample(1700)
+sample = sample.reset_index(drop=True)
+
+sample.to_csv(f"{ROOT}\\processed_data\\gnm.csv")
