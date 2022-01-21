@@ -10,4 +10,4 @@ We will use template extraction method as described by:
 
 ---
 Backlog:
-- Create graph of # articles over time for both GNM and MUC, and put this in chapter 'Data'
+- Investigate whether both datasets are 100% English. They appear to be for at least 99%, but it's a nice extra preprocessing step.

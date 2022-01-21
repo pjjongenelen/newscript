@@ -12,6 +12,7 @@ def get_date(date: int) -> str:
 
 
 # load the correct columns for all data
+print('Loading data...')
 for x in tqdm(range(1572)):
     with open(ROOT + f'\\data\\database_dump_drugs\\{x}.json') as f:
         if x == 0:
@@ -31,13 +32,16 @@ df['date'] = pd.to_datetime(df['date'])
 df = df.drop_duplicates(subset='text')
 
 # remove exceedingly large (len > 15.000) and short (len < 500) texts
+print('Filtering on text length')
 df['text_length'] = df.text.str.len()
 df = df[df.text_length.notna()]
-df = df[df.text_length > 500]
-df = df[df.text_length < 15000]
+print(min(df.text_length))  # necessary information for report
+print(max(df.text_length))
+df = df[df.text_length < 4000]
 df = df.drop(columns=['text_length'], axis=1)
 
 # replace empty strings and lists with NaN
+print('Replacing invalid values with NaN')
 df = df.replace('', np.NaN)
 
 auths = []
@@ -52,7 +56,10 @@ df['author'] = auths
 df = df.reset_index(drop=True)
 
 # draw a sample 
+print('Drawing sample')
 sample = df.sample(1700)
 sample = sample.reset_index(drop=True)
 
+print('Saving to csv')
 sample.to_csv(f"{ROOT}\\processed_data\\gnm.csv")
+print('All done!')

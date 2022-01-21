@@ -7,25 +7,11 @@ import numpy as np
 from nltk.corpus import wordnet
 import os
 import pandas as pd
+from random import sample
 from tqdm import tqdm
 
 # set up:
 ROOT = "C:\\Users\\timjo\\PycharmProjects\\newscript"
-
-
-def load_muc(amount=0) -> pd.DataFrame:
-    """
-    Returns articles from the preprocessed MUC dataset
-    """    
-
-    # load pickle with annotations
-    df = pd.read_pickle(ROOT + "\\processed_data\\muc_annotation.pkl")
-
-    # sample (or not) based on the value of amount
-    if 0 < amount < df.shape[0]:
-        df = df.sample(n=amount, replace=False, axis=0)
-  
-    return df
 
 
 def get_freq_verbs(df: pd.DataFrame, threshold: float) -> list:
@@ -97,7 +83,7 @@ def prob(df) -> dict:
     return dict(zip(event_counts['event'], event_counts['prob']))
 
 
-def pdist(cdist_matrix) -> np.ndarray:
+def pdist(cdist_matrix, source: str) -> np.ndarray:
     """
     Calculates pdist values given the cdist matrix based on the formula on page 979
     pdist(wi, wj) = cdist(wi, wj) / ( sum_all_cdist(wk, wl) )
@@ -106,7 +92,7 @@ def pdist(cdist_matrix) -> np.ndarray:
     sum(cdist_matrix) - ( sum(row_i) + sum(col_j) - cdist(wi, wj) )
     """
 
-    pdist_loc = ROOT + "/src/chambers11/matrices/muc_pdist_matrix.npy"
+    pdist_loc = f"{ROOT}/src/chambers11/matrices/{source}_pdist_matrix.npy"
 
     if os.path.exists(pdist_loc):
         # load and return
@@ -144,12 +130,12 @@ def print_clusters(df: pd.DataFrame, counts: list) -> None:
 
     # for each cluster
     for c in range(len(set(df['cluster']))):
-        cluster_events = df['event'][df['cluster'] == c]
-        print(f"Cluster {c} has size {len(cluster_events)}.")
-        # if the cluster is large enough, print the 10 most frequent event patterns
-        amount = min(len(cluster_events), 10)        
-        print(f"Contains: {'  -  '.join([ev for ev in cluster_events][:amount])}")
-        print("______________________________________________________________________________")
+        cluster_events = df['event'][df['cluster'] == c].tolist()
+        print(f"____Cluster {c} has size {len(cluster_events)}.")
+        # if the cluster is large enough, print 10 random event patterns from the cluster
+        amount = min(len(cluster_events), 20)        
+        evp_sample = sample(cluster_events, amount)
+        print(f"Contains: {' - '.join(evp_sample)}")
 
 
 def save_to_dict(col1, col2, loc: str) -> None:

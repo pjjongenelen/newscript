@@ -21,8 +21,9 @@ from stanza.server import CoreNLPClient
 from tqdm import tqdm
 
 
-N_CLUS = 5
+N_SLOTS = 5
 ROOT = 'C:\\Users\\timjo\\PycharmProjects\\newscript'
+SOURCE = 'gnm'
 
 
 def annotate_corenlp(documents: list) -> list:
@@ -263,7 +264,7 @@ def create_similarity_matrix(coref_mat: np.ndarray, selpref_mat: np.ndarray, evp
 
 def main():
     # load documents
-    df = pd.read_pickle(ROOT + '/src/chambers11/matrices/gnm_xtclab.pkl')[:200]
+    df = pd.read_pickle(f'{ROOT}/processed_data/{SOURCE}_selected_cluster.pkl')
 
     # annotate documents with CoreNLPClient
     df['annotations'] = annotate_corenlp(df['text'])
@@ -287,12 +288,12 @@ def main():
 
     # similarity matrix
     similarity_matrix = create_similarity_matrix(coreference_matrix, selpref_matrix, evp_index)
-    np.save(ROOT + "/src/chambers11/matrices/similarity.npy", similarity_matrix)
+    np.save(f"{ROOT}/src/chambers11/matrices/{SOURCE}_similarity.npy", similarity_matrix)
 
     # cluster the similarity matrix
-    clustering = AgglomerativeClustering(n_clusters = N_CLUS, affinity = 'precomputed', linkage = 'average').fit(similarity_matrix)
+    clustering = AgglomerativeClustering(n_clusters = N_SLOTS, affinity = 'precomputed', linkage = 'average').fit(similarity_matrix)
     slot_mapping = pd.DataFrame({'slot': clustering.labels_, 'event': evp_index})
-    pd.to_pickle(slot_mapping, ROOT + '/src/chambers11/matrices/slot_mapping.pkl')
+    pd.to_pickle(slot_mapping, f'{ROOT}/src/chambers11/matrices/{SOURCE}_slot_mapping.pkl')
 
 
 if __name__ == "__main__":

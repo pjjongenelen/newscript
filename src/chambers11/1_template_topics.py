@@ -4,6 +4,7 @@ Approximate the domain template topics by clustering events patterns based on di
 
 import helpers as h
 from itertools import permutations
+import json
 import math
 import numpy as np
 from os.path import exists
@@ -12,9 +13,10 @@ from sklearn.cluster import AgglomerativeClustering
 from tqdm import tqdm
 
 
-# set up:
+# USER CONFIG:
 ROOT = "C:\\Users\\timjo\\PycharmProjects\\newscript"
-N_CLUS = 77  # number of document clusters, C&J use 77
+SOURCE = "gnm"
+N_CLUS = 15  # number of event pattern clusters
 
 
 def make_cdist_matrix(df, ev_set):
@@ -27,7 +29,7 @@ def make_cdist_matrix(df, ev_set):
     Variable names correspond to formula
     """
 
-    cdist_loc = ROOT + "/src/chambers11/matrices/muc_cdist_matrix.npy"
+    cdist_loc = f"{ROOT}/src/chambers11/matrices/{SOURCE}_cdist_matrix.npy"
 
     if exists(cdist_loc):
         # load and return
@@ -63,7 +65,7 @@ def make_pmi_matrix(p, pdist, ev_set):
     Variable names correspond to formula
     """
 
-    pmi_loc = ROOT + "/src/chambers11/matrices/muc_pmi_matrix.npy"
+    pmi_loc = f"{ROOT}/src/chambers11/matrices/{SOURCE}_pmi_matrix.npy"
 
     if exists(pmi_loc):
         # load and return
@@ -86,27 +88,43 @@ def make_pmi_matrix(p, pdist, ev_set):
 
 
 def main(): 
-    # 1) load all MUC data-----
-    muc_data = h.load_muc()
+    # 1) load data-----
+    df = pd.read_pickle(f"{ROOT}\\processed_data\\{SOURCE}_annotation.pkl")
 
     # 2) get the sorted set of events in the data, necessary to look up indices in the cdist and pmi matrices-----
-    event_set, event_counts = h.make_events_set(muc_data)
+    event_set, event_counts = h.make_events_set(df)
 
     # 3) get the cdist matrix-----
-    muc_cdist_matrix = make_cdist_matrix(muc_data, event_set)
+    cdist_matrix = make_cdist_matrix(df, event_set)
 
     # 4) get the pmi matrix-----
-    muc_pmi_matrix = make_pmi_matrix(h.prob(muc_data), h.pdist(muc_cdist_matrix), event_set)
+    pmi_matrix = make_pmi_matrix(h.prob(df), h.pdist(cdist_matrix, SOURCE), event_set)
     
     # 5) agglomerative clustering-----
-    clustering = AgglomerativeClustering(n_clusters = N_CLUS, affinity = 'precomputed', linkage = 'average').fit(muc_pmi_matrix)
+    clustering = AgglomerativeClustering(n_clusters = N_CLUS, affinity = 'precomputed', linkage = 'average').fit(pmi_matrix)
     print(f'number of clusters = {N_CLUS}, size of largest cluster: {max(np.bincount(clustering.labels_))}')
 
     # 6) print to allow manual identification of clusters-----
     ep_cluster_mapping = pd.DataFrame({'cluster': clustering.labels_, 'event': event_set})
-    h.save_to_dict(ep_cluster_mapping['event'], ep_cluster_mapping['cluster'], loc = ROOT + '/src/chambers11/matrices/event_cluster_dict.json')
+    h.save_to_dict(ep_cluster_mapping['event'], ep_cluster_mapping['cluster'], loc = f'{ROOT}/src/chambers11/matrices/{SOURCE}_event_cluster_dict.json')
     h.print_clusters(ep_cluster_mapping, event_counts)
     
+    # 7) add cluster info to the dataset-----
+    with open(f"{ROOT}\\src\\chambers11\\matrices\\{SOURCE}_event_cluster_dict.json") as f:
+        evp_dict = json.load(f)
+
+    clusters = []
+    for _, row in df.iterrows():
+        subclusters = []
+        for evp in row.event_patterns:
+            subclusters.append(evp_dict[evp[0]])
+        most_freq_clus = max(set(subclusters), key = subclusters.count)
+        clusters.append(most_freq_clus)    
+
+    df['cluster'] = clusters
+
+    pd.to_pickle(df, f"{ROOT}\\processed_data\\{SOURCE}_ann_clus.pkl")
+
 
 if __name__ == "__main__":
     main()

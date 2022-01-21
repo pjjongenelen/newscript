@@ -14,9 +14,13 @@ import pandas as pd
 import stanza
 from tqdm import tqdm
 
+# USER CONFIG:
+ROOT = 'C:\\Users\\timjo\\PycharmProjects\\newscript'
+SOURCE = "gnm"
+
+# setting up other constants
 stanza.download(lang="en", processors="tokenize,pos,lemma,depparse", logging_level="WARN")
 PIPE = stanza.Pipeline(lang="en", processors="tokenize,mwt,pos,lemma,depparse", verbose=False)
-ROOT = 'C:\\Users\\timjo\\PycharmProjects\\newscript'
 NLP = en_core_web_sm.load()
 
 
@@ -98,15 +102,14 @@ def get_event_patterns(annotation, freq_verbs: list) -> list:
 
 
 def main():
-    source = "gnm"
-    pickle_loc = f"{ROOT}\\processed_data\\{source}_annotation.pkl"
+    pickle_loc = f"{ROOT}\\processed_data\\{SOURCE}_annotation.pkl"
     
     if exists(pickle_loc):
         print('Annotation file already created. No need to run this script again.')
 
     else:
         # 1) load all 1700 articles-----
-        df = pd.read_csv(f'{ROOT}\\processed_data\\{source}.csv', index_col=0)
+        df = pd.read_csv(f'{ROOT}\\processed_data\\{SOURCE}.csv', index_col=0)
 
         # 2) annotate with the stanza pipeline-----
         df['annotation'] = annotate(df)    
@@ -117,7 +120,7 @@ def main():
         df['event_patterns'] = df.progress_apply(lambda row: get_event_patterns(row['annotation'], freq_verbs), axis=1)
         
         # 4) save to pickle (JSON will throw an overflow error)-----
-        df.to_pickle(f"{ROOT}\\processed_data\\{source}_annotation.pkl")
+        df.to_pickle(f"{ROOT}\\processed_data\\{SOURCE}_annotation.pkl")
 
 if __name__ == "__main__":
     main()
